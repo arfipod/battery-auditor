@@ -1,0 +1,16 @@
+[Unit]
+Description=Battery Auditor black-box collector
+Documentation=README.md
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/battery-auditor collect --mode blackbox --name blackbox-service
+Restart=on-failure
+RestartSec=5s
+Nice=5
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+
+[Install]
+WantedBy=default.target

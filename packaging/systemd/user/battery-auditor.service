@@ -1,0 +1,17 @@
+[Unit]
+Description=Battery Auditor low-impact collector
+Documentation=README.md
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/battery-auditor collect --mode diagnostic --name user-service
+Restart=on-failure
+RestartSec=5s
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+# Keep the collector quiet. It only reads sysfs and writes SQLite.
+
+[Install]
+WantedBy=default.target

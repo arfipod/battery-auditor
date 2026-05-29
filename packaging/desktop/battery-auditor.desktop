@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Battery Auditor
+Comment=Linux battery diagnostics and TLP companion
+Exec=battery-auditor-qt
+Icon=battery
+Terminal=false
+Categories=System;Monitor;Qt;

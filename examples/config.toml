@@ -1,0 +1,29 @@
+[general]
+# data_dir = "~/.local/state/battery-auditor"
+# db_path = "~/.local/state/battery-auditor/battery-auditor.sqlite3"
+# sysfs_power_supply_dir = "/sys/class/power_supply"
+
+[sampling]
+# Recommended for normal diagnostics on the ThinkPad T460s.
+interval_seconds = 2.0
+ui_refresh_seconds = 5.0
+heartbeat_seconds = 2.0
+low_total_percent = 10.0
+critical_total_percent = 5.0
+percent_jump_threshold = 5.0
+voltage_sag_percent_threshold = 6.0
+sample_delay_warn_factor = 2.5
+
+[sqlite]
+# NORMAL is low overhead. blackbox mode overrides this to FULL.
+synchronous = "NORMAL"
+wal_autocheckpoint_pages = 200
+blackbox_flush_each_sample = false
+
+[expected_thresholds.BAT0]
+start = 75
+stop = 80
+
+[expected_thresholds.BAT1]
+start = 75
+stop = 80
