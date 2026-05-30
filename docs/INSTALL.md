@@ -1,13 +1,13 @@
-# Instalación
+# Installation
 
 ## Debian 13 / Trixie
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip tlp
+sudo apt install -y python3 python3-venv python3-pip tlp libxcb-cursor0
 ```
 
-Clona el repo y crea el entorno:
+Clone the repository and create the environment:
 
 ```bash
 git clone https://github.com/angelrubiodev/battery-auditor.git
@@ -18,13 +18,13 @@ python -m pip install --upgrade pip
 python -m pip install -e '.[ui]'
 ```
 
-Comprueba que lee las baterías:
+Check that it can read the batteries:
 
 ```bash
 battery-auditor once
 ```
 
-## Solo CLI, sin UI
+## CLI only, no UI
 
 ```bash
 python -m pip install -e .
@@ -32,13 +32,13 @@ python -m pip install -e .
 
 ## UI Qt
 
-La UI usa PySide6. Puedes instalarla con pip:
+The UI uses PySide6. You can install it with pip:
 
 ```bash
 python -m pip install -e '.[ui]'
 ```
 
-O con paquetes de la distribución si los tienes disponibles.
+Or with distribution packages if you have them available.
 
 ## systemd user service
 
@@ -47,13 +47,13 @@ O con paquetes de la distribución si los tienes disponibles.
 systemctl --user enable --now battery-auditor.service
 ```
 
-El servicio usa `%h/.local/bin/battery-auditor`. Si instalas en un virtualenv de proyecto y no con `pip install --user`, ajusta `ExecStart` en:
+The service uses `%h/.local/bin/battery-auditor`. If you install inside a project virtualenv instead of using `pip install --user`, adjust `ExecStart` in:
 
 ```text
 ~/.config/systemd/user/battery-auditor.service
 ```
 
-Luego:
+Then:
 
 ```bash
 systemctl --user daemon-reload

@@ -1,8 +1,8 @@
-# Integración con TLP
+# TLP integration
 
-Battery Auditor no sustituye a TLP. Registra datos y ofrece atajos manuales.
+Battery Auditor does not replace TLP. It records data and provides manual shortcuts.
 
-## Diagnóstico TLP
+## TLP diagnostics
 
 ```bash
 battery-auditor tlp-stat battery
@@ -10,29 +10,29 @@ battery-auditor tlp-stat config
 battery-auditor tlp-stat system
 ```
 
-Estos comandos pueden pedir `sudo`.
+These commands may ask for `sudo`.
 
-## Umbrales temporales
+## Temporary thresholds
 
 ```bash
 battery-auditor tlp-setcharge BAT0 75 80
 battery-auditor tlp-setcharge BAT1 75 80
 ```
 
-Esto usa `tlp setcharge`. Los cambios son temporales salvo que estén reflejados en la configuración de TLP.
+This uses `tlp setcharge`. Changes are temporary unless they are reflected in the TLP configuration.
 
-## Recalibración
+## Recalibration
 
 ```bash
 battery-auditor tlp-recalibrate BAT0
 battery-auditor tlp-recalibrate BAT1
 ```
 
-Hazlo de una batería cada vez. Durante la recalibración conviene tener el collector grabando para poder comparar antes/después.
+Do this for one battery at a time. During recalibration, it is useful to keep the collector recording so you can compare before/after.
 
-## Verificación de umbrales
+## Threshold verification
 
-El collector registra estas rutas si existen:
+The collector records these paths if they exist:
 
 ```text
 /sys/class/power_supply/BAT*/charge_control_start_threshold
@@ -42,7 +42,7 @@ El collector registra estas rutas si existen:
 /sys/class/power_supply/BAT*/charge_behaviour
 ```
 
-Puedes definir umbrales esperados en `config.toml`:
+You can define expected thresholds in `config.toml`:
 
 ```toml
 [expected_thresholds.BAT0]
@@ -54,8 +54,8 @@ start = 75
 stop = 80
 ```
 
-Si lo leído desde sysfs no coincide, se registra `THRESHOLD_MISMATCH`.
+If the value read from sysfs does not match, `THRESHOLD_MISMATCH` is recorded.
 
-## Nota de diseño
+## Design note
 
-El collector no llama a `tlp-stat` periódicamente. `tlp-stat` es útil para diagnóstico manual, pero no para una medición de consumo de baja invasividad.
+The collector does not call `tlp-stat` periodically. `tlp-stat` is useful for manual diagnostics, but not for low-impact power-consumption measurement.

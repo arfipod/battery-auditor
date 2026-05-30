@@ -4,29 +4,29 @@
 
 - Collector sysfs.
 - SQLite WAL.
-- CLI básica.
-- UI Qt básica.
-- Servicios systemd de usuario.
-- Eventos iniciales.
-- Exportación CSV/JSON.
+- Basic CLI.
+- Basic Qt UI.
+- User systemd services.
+- Initial events.
+- CSV/JSON export.
 
 ## v0.2
 
-- Panel de comparación antes/después de recalibración.
-- Informe HTML estático.
-- Detección más fina de descarga secuencial vs paralela en portátiles multi-batería.
-- Importación de logs antiguos.
-- Mejoras de visualización: zoom, selección de rango, marcadores de eventos.
+- Comparison panel before/after recalibration.
+- Static HTML report.
+- More precise detection of sequential vs parallel discharge on multi-battery laptops.
+- Import of old logs.
+- Visualization improvements: zoom, range selection, event markers.
 
 ## v0.3
 
 - Paquete `.deb`.
-- Integración opcional con notificaciones desktop.
-- Perfil de pruebas controladas: brillo, carga CPU fija, bloqueo de suspensión opcional.
-- Modo headless para benchmark reproducible.
+- Optional desktop notification integration.
+- Controlled test profile: brightness, fixed CPU load, optional suspend blocking.
+- Headless mode for reproducible benchmarks.
 
 ## v0.4
 
-- Exportador Prometheus opcional.
-- Informe de salud de batería a largo plazo.
-- Comparativa automática contra sesiones previas.
+- Optional Prometheus exporter.
+- Long-term battery health report.
+- Automatic comparison against previous sessions.

@@ -1,78 +1,78 @@
-# Diseño
+# Design
 
-## Objetivos
+## Goals
 
-1. Medir batería sin introducir carga artificial apreciable.
-2. Separar collector, almacenamiento, análisis y UI.
-3. Registrar suficiente información para diagnosticar baterías múltiples.
-4. Soportar sesiones que acaben por apagado inesperado.
-5. Integrarse con TLP sin llamar a TLP en bucle.
+1. Measure batteries without introducing meaningful artificial load.
+2. Separate the collector, storage, analysis, and UI.
+3. Record enough information to diagnose multiple batteries.
+4. Support sessions that end because of unexpected shutdown.
+5. Integrate with TLP without calling TLP in a loop.
 
-## Arquitectura
+## Architecture
 
 ```text
 battery-auditor
-├─ collector
-│  ├─ lee /sys/class/power_supply
-│  ├─ genera eventos
-│  ├─ escribe SQLite
-│  └─ actualiza heartbeat
-│
-├─ SQLite
-│  ├─ sessions
-│  ├─ samples
-│  ├─ sample_batteries
-│  ├─ power_supplies
-│  └─ events
-│
-├─ CLI
-│  ├─ once
-│  ├─ collect
-│  ├─ sessions
-│  ├─ analyze
-│  ├─ export
-│  └─ tlp-*
-│
-└─ UI Qt opcional
-   ├─ estado actual
-   ├─ grabación manual
-   ├─ gráficas
-   ├─ eventos
-   └─ panel TLP
+|-- collector
+|  |-- reads /sys/class/power_supply
+|  |-- generates events
+|  |-- writes SQLite
+|  `-- updates heartbeat
+|
+|-- SQLite
+|  |-- sessions
+|  |-- samples
+|  |-- sample_batteries
+|  |-- power_supplies
+|  `-- events
+|
+|-- CLI
+|  |-- once
+|  |-- collect
+|  |-- sessions
+|  |-- analyze
+|  |-- export
+|  `-- tlp-*
+|
+`-- optional Qt UI
+   |-- current status
+   |-- manual recording
+   |-- charts
+   |-- events
+   `-- TLP panel
 ```
 
-## Hot path del collector
+## Collector hot path
 
-El collector solo hace operaciones baratas:
+The collector only performs cheap operations:
 
-- `read()` de sysfs;
-- conversión de strings a enteros/flotantes;
-- inserción SQLite;
-- heartbeat JSON pequeño.
+- `read()` from sysfs;
+- string conversion to integers/floats;
+- SQLite insert;
+- small JSON heartbeat.
 
-No usa DBus, UPower, TLP ni comandos externos periódicos.
+It does not use DBus, UPower, TLP, or periodic external commands.
 
-## Por qué SQLite WAL
+## Why SQLite WAL
 
-SQLite WAL permite escribir muestras sin bloquear lecturas de la UI. El modo normal usa `synchronous=NORMAL`. El modo black-box cambia a `FULL` y fuerza flush por muestra para priorizar la durabilidad frente al consumo mínimo.
+SQLite WAL allows writing samples without blocking UI reads. Normal mode uses `synchronous=NORMAL`. Black-box mode switches to `FULL` and forces a flush for every sample to prioritize durability over minimum power use.
 
-## Medición por batería
+## Per-battery measurement
 
-No se usa solo el porcentaje global. Cada batería tiene:
+Battery Auditor does not rely only on the global percentage. Each battery has:
 
-- porcentaje reportado por kernel;
-- porcentaje calculado: `energy_now / energy_full * 100`;
-- salud: `energy_full / energy_full_design * 100`;
-- potencia instantánea;
-- voltaje;
-- estado de carga/descarga;
-- umbrales de carga expuestos por sysfs.
+- kernel-reported percentage;
+- computed percentage: `energy_now / energy_full * 100`;
+- health: `energy_full / energy_full_design * 100`;
+- instantaneous power;
+- voltage;
+- charging/discharging state;
+- charge thresholds exposed by sysfs.
 
-Esto permite distinguir descarga normal por firmware de caída de voltaje, mala calibración o degradación física.
+This makes it possible to distinguish normal firmware-controlled discharge from voltage sag, bad calibration, or physical degradation.
 
-## Eventos
+## Events
 
-Eventos iniciales:
+Initial events:
 
 - `AC_CONNECTED`
 - `AC_DISCONNECTED`

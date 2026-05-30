@@ -30,10 +30,10 @@ class EventDetector:
         if prev.ac_online == cur.ac_online:
             return []
         if cur.ac_online is True:
-            return [Event("AC_CONNECTED", "info", "Adaptador AC conectado.")]
+            return [Event("AC_CONNECTED", "info", "AC adapter connected.")]
         if cur.ac_online is False:
-            return [Event("AC_DISCONNECTED", "info", "Adaptador AC desconectado.")]
-        return [Event("AC_STATE_UNKNOWN", "warning", "No se pudo determinar el estado del adaptador AC.")]
+            return [Event("AC_DISCONNECTED", "info", "AC adapter disconnected.")]
+        return [Event("AC_STATE_UNKNOWN", "warning", "Could not determine AC adapter state.")]
 
     def _battery_events(self, prev: SystemSnapshot, cur: SystemSnapshot) -> list[Event]:
         events: list[Event] = []
@@ -47,7 +47,7 @@ class EventDetector:
                     Event(
                         "BATTERY_SWITCH",
                         "info",
-                        f"Batería activa en descarga: {active_discharge}.",
+                        f"Active discharging battery: {active_discharge}.",
                         battery_name=active_discharge,
                         details={"previous_active": self.last_active_discharge, "current_active": active_discharge},
                     )
@@ -57,14 +57,14 @@ class EventDetector:
         for name, battery in cur_by_name.items():
             prev_b = prev_by_name.get(name)
             if prev_b is None:
-                events.append(Event("BATTERY_APPEARED", "info", f"Nueva batería detectada: {name}.", name))
+                events.append(Event("BATTERY_APPEARED", "info", f"New battery detected: {name}.", name))
                 continue
             if prev_b.status != battery.status:
                 events.append(
                     Event(
                         "BATTERY_STATUS_CHANGE",
                         "info",
-                        f"{name}: estado {prev_b.status!r} → {battery.status!r}.",
+                        f"{name}: status {prev_b.status!r} -> {battery.status!r}.",
                         battery_name=name,
                         details={"old": prev_b.status, "new": battery.status},
                     )
@@ -73,7 +73,7 @@ class EventDetector:
             events.extend(self._voltage_events(prev_b, battery))
 
         for name in set(prev_by_name) - set(cur_by_name):
-            events.append(Event("BATTERY_DISAPPEARED", "warning", f"La batería {name} dejó de aparecer en sysfs.", name))
+            events.append(Event("BATTERY_DISAPPEARED", "warning", f"Battery {name} stopped appearing in sysfs.", name))
         return events
 
     def _jump_events(self, prev: BatterySnapshot, cur: BatterySnapshot) -> list[Event]:
@@ -86,7 +86,7 @@ class EventDetector:
                     Event(
                         "PERCENT_JUMP",
                         "warning",
-                        f"{cur.name}: salto de porcentaje reportado de {delta:+.1f} puntos.",
+                        f"{cur.name}: reported percentage jumped by {delta:+.1f} points.",
                         battery_name=cur.name,
                         details={"previous": prev.capacity_percent, "current": cur.capacity_percent, "delta": delta},
                     )
@@ -98,7 +98,7 @@ class EventDetector:
                     Event(
                         "COMPUTED_PERCENT_JUMP",
                         "warning",
-                        f"{cur.name}: salto de porcentaje calculado por Wh de {delta:+.1f} puntos.",
+                        f"{cur.name}: Wh-based computed percentage jumped by {delta:+.1f} points.",
                         battery_name=cur.name,
                         details={"previous": prev.computed_percent, "current": cur.computed_percent, "delta": delta},
                     )
@@ -116,7 +116,7 @@ class EventDetector:
                 Event(
                     "VOLTAGE_SAG",
                     "warning",
-                    f"{cur.name}: caída rápida de voltaje de {delta_pct:.1f}%.",
+                    f"{cur.name}: quick voltage sag of {delta_pct:.1f}%.",
                     battery_name=cur.name,
                     details={"previous_uv": prev.voltage_now_uv, "current_uv": cur.voltage_now_uv, "delta_pct": delta_pct},
                 )
@@ -153,7 +153,7 @@ class EventDetector:
                     Event(
                         "THRESHOLD_MISMATCH",
                         "warning",
-                        f"{battery.name}: umbrales de carga reales no coinciden con los esperados.",
+                        f"{battery.name}: actual charge thresholds do not match expected thresholds.",
                         battery_name=battery.name,
                         details=details,
                     )
@@ -171,7 +171,7 @@ class EventDetector:
                 Event(
                     "LOW_BATTERY",
                     "warning",
-                    f"Nivel total bajo: {pct:.1f}%.",
+                    f"Low total level: {pct:.1f}%.",
                     details={"total_computed_percent": pct},
                 )
             )
@@ -181,7 +181,7 @@ class EventDetector:
                 Event(
                     "CRITICAL_BATTERY",
                     "critical",
-                    f"Nivel total crítico: {pct:.1f}%.",
+                    f"Critical total level: {pct:.1f}%.",
                     details={"total_computed_percent": pct},
                 )
             )
@@ -195,7 +195,7 @@ class EventDetector:
                 Event(
                     "MISSED_SAMPLE_WINDOW",
                     "warning",
-                    f"Intervalo efectivo alto: {elapsed:.2f}s para objetivo {expected:.2f}s.",
+                    f"High effective interval: {elapsed:.2f}s for target {expected:.2f}s.",
                     details={"expected_seconds": expected, "actual_seconds": elapsed},
                 )
             ]

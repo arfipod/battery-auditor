@@ -1,20 +1,20 @@
-# Plan de pruebas
+# Test plan
 
-## Pruebas unitarias
+## Unit tests
 
 ```bash
 pytest
 ```
 
-Casos:
+Cases:
 
-- lectura de sysfs desde fixture;
-- cálculo de porcentaje por Wh;
-- inserción SQLite;
-- recuperación de sesión abierta;
-- exportación.
+- sysfs reads from fixture;
+- Wh-based percentage calculation;
+- SQLite insert;
+- open-session recovery;
+- export.
 
-## Prueba de humo en equipo real
+## Smoke test on real hardware
 
 ```bash
 battery-auditor once
@@ -24,31 +24,31 @@ battery-auditor analyze
 battery-auditor export --format csv --out smoke.csv
 ```
 
-## Prueba black-box controlada
+## Controlled black-box test
 
-1. Cargar el equipo a un nivel seguro.
-2. Ejecutar:
+1. Charge the machine to a safe level.
+2. Run:
 
 ```bash
 battery-auditor collect --mode blackbox --name blackbox-smoke --duration 60
 ```
 
-3. Confirmar:
+3. Confirm:
 
 ```bash
 battery-auditor analyze
 ```
 
-## Prueba de recuperación
+## Recovery test
 
-Simular un corte del collector:
+Simulate a collector interruption:
 
 ```bash
 battery-auditor collect --mode diagnostic --name recover-test
-# En otra terminal:
+# In another terminal:
 pkill -f 'battery_auditor.cli.*collect'
 battery-auditor recover
 battery-auditor analyze
 ```
 
-Debe aparecer `PROBABLE_POWER_LOSS` o sesión interrumpida.
+`PROBABLE_POWER_LOSS` or an interrupted session should appear.

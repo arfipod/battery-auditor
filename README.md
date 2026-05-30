@@ -1,145 +1,145 @@
 # Battery Auditor
 
-Battery Auditor es una herramienta local para Linux que registra, analiza y grafica el comportamiento real de baterías, especialmente en portátiles con varias baterías como los Lenovo ThinkPad con Power Bridge.
+Battery Auditor is a local Linux tool that records, analyzes, and charts real battery behavior, especially on laptops with multiple batteries such as Lenovo ThinkPads with Power Bridge.
 
-El objetivo principal no es ahorrar batería, sino **diagnosticarla sin contaminar demasiado la medición**.
+Its main goal is not to save battery power, but to **diagnose batteries without adding much measurement noise**.
 
-## Qué incluye
+## What's included
 
-- Collector ligero basado en `/sys/class/power_supply`.
-- Escritura persistente en SQLite con WAL.
-- Modo black-box para pruebas en las que el portátil puede apagarse por falta de batería.
-- Detección de eventos: cambio AC, cambio de batería activa, saltos de porcentaje, caída brusca de voltaje, batería baja/crítica y sesiones interrumpidas.
-- UI opcional en Python + Qt/PySide6.
-- Wrapper manual para TLP: `tlp-stat`, `setcharge`, `recalibrate`.
-- Servicios systemd de usuario.
-- Exportación CSV/JSON para análisis externo.
+- Lightweight collector based on `/sys/class/power_supply`.
+- Persistent SQLite writes with WAL.
+- Black-box mode for tests where the laptop may shut down because the battery runs out.
+- Event detection: AC changes, active battery changes, percentage jumps, sudden voltage sag, low/critical battery, and interrupted sessions.
+- Optional Python + Qt/PySide6 UI.
+- Manual TLP wrapper: `tlp-stat`, `setcharge`, `recalibrate`.
+- User-level systemd services.
+- CSV/JSON export for external analysis.
 
-## Diseño no invasivo
+## Non-invasive design
 
-El collector no ejecuta `tlp-stat`, `upower`, `acpi`, `journalctl` ni comandos externos en bucle. En el camino caliente solo hace:
+The collector does not run `tlp-stat`, `upower`, `acpi`, `journalctl`, or any other external command in a loop. In the hot path it only performs:
 
-1. lectura de ficheros pequeños en `/sys/class/power_supply`;
-2. cálculo de métricas derivadas;
-3. inserción de filas compactas en SQLite.
+1. small file reads from `/sys/class/power_supply`;
+2. derived metric calculations;
+3. compact row inserts into SQLite.
 
-La UI es opcional. Para una prueba de descarga seria conviene cerrar la UI y dejar solo el collector o el servicio systemd.
+The UI is optional. For a serious discharge test, it is better to close the UI and leave only the collector or systemd service running.
 
-## Instalación en Debian 13 / Linux moderno
+## Installation on Debian 13 / modern Linux
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip tlp
+sudo apt install -y python3 python3-venv python3-pip tlp libxcb-cursor0
 
-# Para la UI Qt mediante pip:
+# For the Qt UI via pip:
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e '.[ui]'
 ```
 
-Si prefieres instalar PySide6 desde paquetes de Debian, instala los paquetes `python3-pyside6*` disponibles en tu versión y luego:
+If you prefer to install PySide6 from Debian packages, install the `python3-pyside6*` packages available for your version and then run:
 
 ```bash
 python -m pip install -e .
 ```
 
-## Uso rápido
+## Quick start
 
-Leer una muestra puntual:
+Read a single snapshot:
 
 ```bash
 battery-auditor once
 ```
 
-Grabar una sesión diagnóstica:
+Record a diagnostic session:
 
 ```bash
-battery-auditor collect --mode diagnostic --name descarga-normal
+battery-auditor collect --mode diagnostic --name normal-discharge
 ```
 
-Grabar en modo black-box:
+Record in black-box mode:
 
 ```bash
-battery-auditor collect --mode blackbox --name descarga-hasta-apagado
+battery-auditor collect --mode blackbox --name discharge-to-shutdown
 ```
 
-Listar sesiones:
+List sessions:
 
 ```bash
 battery-auditor sessions
 ```
 
-Analizar la última sesión:
+Analyze the latest session:
 
 ```bash
 battery-auditor analyze
 ```
 
-Exportar a CSV:
+Export to CSV:
 
 ```bash
-battery-auditor export --format csv --out descarga.csv
+battery-auditor export --format csv --out discharge.csv
 ```
 
-Abrir la UI:
+Open the UI:
 
 ```bash
 battery-auditor-qt
 ```
 
-## Modo black-box
+## Black-box mode
 
-El modo black-box está pensado para acotar el instante de apagado por batería:
+Black-box mode is designed to bracket the moment of battery-related shutdown:
 
 ```bash
-battery-auditor collect --mode blackbox --name prueba-final
+battery-auditor collect --mode blackbox --name final-test
 ```
 
-En este modo:
+In this mode:
 
-- intervalo por defecto: 1 segundo;
+- default interval: 1 second;
 - SQLite `synchronous=FULL`;
-- flush por muestra;
-- heartbeat persistente por sesión;
-- si el equipo se apaga y la sesión queda abierta, el siguiente `recover` la marca como `PROBABLE_POWER_LOSS`.
+- flush on every sample;
+- persistent per-session heartbeat;
+- if the machine shuts down and the session remains open, the next `recover` marks it as `PROBABLE_POWER_LOSS`.
 
-Al reiniciar:
+After rebooting:
 
 ```bash
 battery-auditor recover
 battery-auditor analyze
 ```
 
-El instante exacto de apagado no se puede medir después de que la máquina pierde energía, pero sí se puede acotar al último heartbeat/muestra persistida y al intervalo configurado.
+The exact shutdown instant cannot be measured after the machine loses power, but it can be bracketed by the last persisted heartbeat/sample and the configured interval.
 
-## Servicios systemd de usuario
+## User systemd services
 
-Instalar unidades:
+Install units:
 
 ```bash
 ./scripts/install-user-service.sh
 ```
 
-Activar collector normal:
+Enable the normal collector:
 
 ```bash
 systemctl --user enable --now battery-auditor.service
 ```
 
-Iniciar una sesión black-box bajo systemd:
+Start a black-box session under systemd:
 
 ```bash
 systemctl --user start battery-auditor-blackbox.service
 ```
 
-Ver logs:
+View logs:
 
 ```bash
 journalctl --user -u battery-auditor.service -f
 ```
 
-Desinstalar unidades:
+Uninstall units:
 
 ```bash
 ./scripts/uninstall-user-service.sh
@@ -147,9 +147,9 @@ Desinstalar unidades:
 
 ## TLP
 
-Battery Auditor no sustituye a TLP. Lo acompaña.
+Battery Auditor does not replace TLP. It complements it.
 
-Comandos útiles:
+Useful commands:
 
 ```bash
 battery-auditor tlp-stat battery
@@ -160,33 +160,33 @@ battery-auditor tlp-recalibrate BAT0
 battery-auditor tlp-recalibrate BAT1
 ```
 
-Las acciones TLP son manuales y no forman parte del collector periódico para no contaminar la medición.
+TLP actions are manual and are not part of the periodic collector, so they do not contaminate measurements.
 
-## Datos registrados
+## Recorded data
 
-Por cada muestra se guarda:
+For each sample, Battery Auditor stores:
 
-- timestamp wall-clock e ISO;
-- timestamp monotónico;
-- estado AC;
-- energía total calculada;
-- potencia total;
-- porcentaje total calculado;
-- métricas internas del collector;
-- por batería: estado, porcentaje reportado, porcentaje calculado por Wh, salud, energía, potencia, voltaje, ciclos, tecnología, fabricante, modelo, serial y umbrales expuestos por sysfs.
+- wall-clock and ISO timestamp;
+- monotonic timestamp;
+- AC state;
+- computed total energy;
+- total power;
+- computed total percentage;
+- internal collector metrics;
+- per battery: status, reported percentage, Wh-based computed percentage, health, energy, power, voltage, cycles, technology, manufacturer, model, serial number, and thresholds exposed by sysfs.
 
-Ver más en [`docs/SCHEMA.md`](docs/SCHEMA.md).
+See more in [`docs/SCHEMA.md`](docs/SCHEMA.md).
 
-## Configuración
+## Configuration
 
-Copia el ejemplo:
+Copy the example:
 
 ```bash
 mkdir -p ~/.config/battery-auditor
 cp examples/config.toml ~/.config/battery-auditor/config.toml
 ```
 
-Ajusta especialmente:
+Pay special attention to:
 
 ```toml
 [sampling]
@@ -201,7 +201,7 @@ start = 75
 stop = 80
 ```
 
-## Desarrollo
+## Development
 
 ```bash
 python3 -m venv .venv
@@ -211,6 +211,6 @@ pytest
 ruff check .
 ```
 
-## Estado del proyecto
+## Project status
 
-Versión inicial funcional. El collector, SQLite, CLI, systemd y UI están preparados para usarse y evolucionar. Las siguientes mejoras están en [`docs/ROADMAP.md`](docs/ROADMAP.md).
+Initial functional version. The collector, SQLite, CLI, systemd units, and UI are ready to use and evolve. Upcoming improvements are listed in [`docs/ROADMAP.md`](docs/ROADMAP.md).

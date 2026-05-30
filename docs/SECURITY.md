@@ -1,12 +1,12 @@
-# Seguridad y permisos
+# Security and permissions
 
-## Lectura
+## Reading
 
-El collector solo necesita leer `/sys/class/power_supply`. Normalmente no requiere root.
+The collector only needs to read `/sys/class/power_supply`. It normally does not require root.
 
-## Escritura
+## Writing
 
-La base SQLite se guarda en el directorio de estado del usuario:
+The SQLite database is stored in the user's state directory:
 
 ```text
 ~/.local/state/battery-auditor/
@@ -14,14 +14,14 @@ La base SQLite se guarda en el directorio de estado del usuario:
 
 ## TLP
 
-Las acciones TLP pueden requerir `sudo`:
+TLP actions may require `sudo`:
 
 - `tlp-stat`
 - `tlp setcharge`
 - `tlp recalibrate`
 
-La UI y CLI solo ejecutan estos comandos cuando el usuario lo pide explícitamente.
+The UI and CLI only run these commands when the user explicitly requests them.
 
 ## systemd
 
-Las unidades incluidas son servicios de usuario, no servicios de sistema. No corren como root.
+The included units are user services, not system services. They do not run as root.

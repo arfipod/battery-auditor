@@ -1,6 +1,6 @@
-# Esquema SQLite
+# SQLite schema
 
-La base de datos por defecto está en:
+The default database is located at:
 
 ```text
 ~/.local/state/battery-auditor/battery-auditor.sqlite3
@@ -8,9 +8,9 @@ La base de datos por defecto está en:
 
 ## `sessions`
 
-Una fila por sesión de grabación.
+One row per recording session.
 
-Campos relevantes:
+Relevant fields:
 
 - `id`
 - `name`
@@ -28,9 +28,9 @@ Campos relevantes:
 
 ## `samples`
 
-Una fila por muestra temporal.
+One row per time sample.
 
-Campos relevantes:
+Relevant fields:
 
 - `session_id`
 - `seq`
@@ -54,9 +54,9 @@ Campos relevantes:
 
 ## `sample_batteries`
 
-Una fila por batería y muestra.
+One row per battery and sample.
 
-Campos relevantes:
+Relevant fields:
 
 - `sample_id`
 - `session_id`
@@ -87,7 +87,7 @@ Campos relevantes:
 
 ## `power_supplies`
 
-Una fila por fuente de alimentación no batería y muestra.
+One row per non-battery power supply and sample.
 
 - `name`
 - `type`
@@ -96,7 +96,7 @@ Una fila por fuente de alimentación no batería y muestra.
 
 ## `events`
 
-Eventos derivados.
+Derived events.
 
 - `event_type`
 - `severity`
@@ -104,12 +104,12 @@ Eventos derivados.
 - `message`
 - `details_json`
 
-## Unidades
+## Units
 
-Las rutas sysfs de energía/potencia/voltaje suelen venir en micro-unidades:
+Energy/power/voltage sysfs paths usually come in micro-units:
 
 - `energy_*`: micro-watt-hour (`uWh`)
 - `power_now`: micro-watt (`uW`)
 - `voltage_now`: microvolt (`uV`)
 
-Battery Auditor conserva estas unidades crudas y calcula vistas en Wh/W/V en CLI/UI cuando hace falta.
+Battery Auditor preserves these raw units and calculates Wh/W/V views in the CLI/UI when needed.

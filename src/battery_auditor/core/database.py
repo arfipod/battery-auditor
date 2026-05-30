@@ -249,7 +249,7 @@ class BatteryDatabase:
                     row["last_heartbeat_monotonic"],
                     "PROBABLE_POWER_LOSS",
                     "warning",
-                    "La sesión quedó abierta. Puede haber terminado por apagado, suspensión forzada o corte de energía.",
+                    "The session was left open. It may have ended because of shutdown, forced suspend, or power loss.",
                     json.dumps({"reason": reason}, ensure_ascii=False, sort_keys=True),
                     now,
                 ),

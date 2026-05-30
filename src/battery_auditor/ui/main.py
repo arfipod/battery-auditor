@@ -70,7 +70,7 @@ class SimpleLineChart(QWidget):
 
         all_points = [point for _name, points in self.series for point in points]
         if not all_points:
-            painter.drawText(plot, Qt.AlignmentFlag.AlignCenter, "No hay datos para graficar.")
+            painter.drawText(plot, Qt.AlignmentFlag.AlignCenter, "No data to plot.")
             return
 
         min_x = min(x for x, _y in all_points)
@@ -89,7 +89,7 @@ class SimpleLineChart(QWidget):
 
         painter.drawText(QRectF(0, plot.top(), 48, 20), Qt.AlignmentFlag.AlignRight, f"{max_y:.1f}")
         painter.drawText(QRectF(0, plot.bottom() - 20, 48, 20), Qt.AlignmentFlag.AlignRight, f"{min_y:.1f}")
-        painter.drawText(QRectF(plot.left(), plot.bottom() + 6, plot.width(), 18), Qt.AlignmentFlag.AlignCenter, "minutos desde inicio")
+        painter.drawText(QRectF(plot.left(), plot.bottom() + 6, plot.width(), 18), Qt.AlignmentFlag.AlignCenter, "minutes from start")
         painter.drawText(QRectF(4, plot.center().y() - 10, 44, 20), Qt.AlignmentFlag.AlignCenter, self.y_label)
 
         palette = self.palette()
@@ -130,14 +130,14 @@ class MainWindow(QMainWindow):
         self.resize(1080, 760)
 
         tabs = QTabWidget()
-        tabs.addTab(self._build_overview_tab(), "Estado")
-        tabs.addTab(self._build_recorder_tab(), "Grabación")
-        tabs.addTab(self._build_charts_tab(), "Gráficas")
-        tabs.addTab(self._build_events_tab(), "Eventos")
+        tabs.addTab(self._build_overview_tab(), "Status")
+        tabs.addTab(self._build_recorder_tab(), "Recording")
+        tabs.addTab(self._build_charts_tab(), "Charts")
+        tabs.addTab(self._build_events_tab(), "Events")
         tabs.addTab(self._build_tlp_tab(), "TLP")
         self.setCentralWidget(tabs)
 
-        refresh_action = QAction("Refrescar", self)
+        refresh_action = QAction("Refresh", self)
         refresh_action.triggered.connect(self.refresh_all)
         self.menuBar().addAction(refresh_action)
 
@@ -152,7 +152,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(widget)
         row = QHBoxLayout()
         self.db_label = QLabel(f"DB: {self.cfg.resolved_db_path()}")
-        refresh = QPushButton("Refrescar estado")
+        refresh = QPushButton("Refresh status")
         refresh.clicked.connect(self.refresh_live_snapshot)
         row.addWidget(self.db_label)
         row.addStretch(1)
@@ -174,14 +174,14 @@ class MainWindow(QMainWindow):
         self.record_interval.setSuffix(" s")
         self.record_mode = QComboBox()
         self.record_mode.addItems(["diagnostic", "passive", "blackbox"])
-        form.addRow("Nombre", self.record_name)
-        form.addRow("Intervalo", self.record_interval)
-        form.addRow("Modo", self.record_mode)
+        form.addRow("Name", self.record_name)
+        form.addRow("Interval", self.record_interval)
+        form.addRow("Mode", self.record_mode)
         layout.addLayout(form)
 
         row = QHBoxLayout()
-        self.start_record_button = QPushButton("Iniciar collector")
-        self.stop_record_button = QPushButton("Detener collector")
+        self.start_record_button = QPushButton("Start collector")
+        self.stop_record_button = QPushButton("Stop collector")
         self.stop_record_button.setEnabled(False)
         self.start_record_button.clicked.connect(self.start_collector_process)
         self.stop_record_button.clicked.connect(self.stop_collector_process)
@@ -193,7 +193,7 @@ class MainWindow(QMainWindow):
         self.collector_output = QPlainTextEdit()
         self.collector_output.setReadOnly(True)
         layout.addWidget(self.collector_output)
-        layout.addWidget(QLabel("Nota: para una prueba black-box limpia, arranca el servicio o CLI y cierra la UI."))
+        layout.addWidget(QLabel("Note: for a clean black-box test, start the service or CLI and close the UI."))
         return widget
 
     def _build_charts_tab(self) -> QWidget:
@@ -210,13 +210,13 @@ class MainWindow(QMainWindow):
             "voltage_now_v",
             "health_percent",
         ])
-        refresh = QPushButton("Actualizar gráfica")
+        refresh = QPushButton("Update chart")
         refresh.clicked.connect(self.refresh_chart)
         self.session_combo.currentIndexChanged.connect(self.refresh_chart)
         self.metric_combo.currentIndexChanged.connect(self.refresh_chart)
-        controls.addWidget(QLabel("Sesión"))
+        controls.addWidget(QLabel("Session"))
         controls.addWidget(self.session_combo, 1)
-        controls.addWidget(QLabel("Métrica"))
+        controls.addWidget(QLabel("Metric"))
         controls.addWidget(self.metric_combo)
         controls.addWidget(refresh)
         self.chart = SimpleLineChart()
@@ -227,10 +227,10 @@ class MainWindow(QMainWindow):
     def _build_events_tab(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        refresh = QPushButton("Actualizar eventos")
+        refresh = QPushButton("Update events")
         refresh.clicked.connect(self.refresh_events)
         self.events_table = QTableWidget(0, 5)
-        self.events_table.setHorizontalHeaderLabels(["Hora", "Severidad", "Tipo", "Batería", "Mensaje"])
+        self.events_table.setHorizontalHeaderLabels(["Time", "Severity", "Type", "Battery", "Message"])
         layout.addWidget(refresh)
         layout.addWidget(self.events_table)
         return widget
@@ -260,11 +260,11 @@ class MainWindow(QMainWindow):
         self.tlp_stop = QSpinBox()
         self.tlp_stop.setRange(1, 100)
         self.tlp_stop.setValue(80)
-        apply = QPushButton("Aplicar setcharge temporal")
-        recalibrate = QPushButton("Recalibrar batería")
+        apply = QPushButton("Apply temporary setcharge")
+        recalibrate = QPushButton("Recalibrate battery")
         apply.clicked.connect(self.apply_tlp_setcharge)
         recalibrate.clicked.connect(self.recalibrate_battery)
-        form.addWidget(QLabel("Batería"))
+        form.addWidget(QLabel("Battery"))
         form.addWidget(self.tlp_battery)
         form.addWidget(QLabel("Start"))
         form.addWidget(self.tlp_start)
@@ -291,7 +291,7 @@ class MainWindow(QMainWindow):
         self.session_combo.blockSignals(True)
         self.session_combo.clear()
         for row in self.db.list_sessions(limit=200):
-            label = f"{row['started_at_iso']} | {row['id']} | {row['sample_count']} muestras"
+            label = f"{row['started_at_iso']} | {row['id']} | {row['sample_count']} samples"
             self.session_combo.addItem(label, row["id"])
         if current:
             index = self.session_combo.findData(current)
@@ -307,12 +307,12 @@ class MainWindow(QMainWindow):
     def refresh_chart(self) -> None:
         session_id = self.session_combo.currentData()
         if not session_id:
-            self.chart.set_data("Sin sesión", "", [])
+            self.chart.set_data("No session", "", [])
             return
         metric = self.metric_combo.currentText()
         rows = self.db.fetch_session_series(str(session_id))
         if not rows:
-            self.chart.set_data("Sin datos", metric, [])
+            self.chart.set_data("No data", metric, [])
             return
         first_time = float(rows[0]["wall_time"])
         grouped: dict[str, list[tuple[float, float]]] = defaultdict(list)
@@ -356,13 +356,13 @@ class MainWindow(QMainWindow):
 
     def start_collector_process(self) -> None:
         if self.collector_process is not None:
-            QMessageBox.information(self, "Collector", "Ya hay un collector iniciado desde la UI.")
+            QMessageBox.information(self, "Collector", "A collector is already running from the UI.")
             return
         if self.record_mode.currentText() == "blackbox":
             reply = QMessageBox.question(
                 self,
-                "Modo blackbox",
-                "El modo blackbox es más fiable si cierras la UI y lo ejecutas como servicio/CLI. ¿Iniciarlo igualmente desde la UI?",
+                "Black-box mode",
+                "Black-box mode is more reliable if you close the UI and run it as a service/CLI. Start it from the UI anyway?",
             )
             if reply != QMessageBox.StandardButton.Yes:
                 return
@@ -389,7 +389,7 @@ class MainWindow(QMainWindow):
         self.collector_process = process
         self.start_record_button.setEnabled(False)
         self.stop_record_button.setEnabled(True)
-        self.collector_output.appendPlainText("Collector iniciado.\n")
+        self.collector_output.appendPlainText("Collector started.\n")
 
     def stop_collector_process(self) -> None:
         if self.collector_process is None:
@@ -405,7 +405,7 @@ class MainWindow(QMainWindow):
             self.collector_output.appendPlainText(text.rstrip())
 
     def _collector_finished(self) -> None:
-        self.collector_output.appendPlainText("Collector detenido.\n")
+        self.collector_output.appendPlainText("Collector stopped.\n")
         self.collector_process = None
         self.start_record_button.setEnabled(True)
         self.stop_record_button.setEnabled(False)
@@ -436,8 +436,8 @@ class MainWindow(QMainWindow):
         battery = self.tlp_battery.currentText()
         reply = QMessageBox.question(
             self,
-            "Recalibrar batería",
-            f"Esto ejecutará 'sudo tlp recalibrate {battery}'. Puede tardar y descargar la batería seleccionada. ¿Continuar?",
+            "Recalibrate battery",
+            f"This will run 'sudo tlp recalibrate {battery}'. It can take a while and discharge the selected battery. Continue?",
         )
         if reply != QMessageBox.StandardButton.Yes:
             return

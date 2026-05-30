@@ -1,86 +1,86 @@
-# Metodología de medición
+# Measurement methodology
 
-## Perfiles
+## Profiles
 
 ### passive
 
-Uso: seguimiento de largo plazo.
+Use: long-term tracking.
 
-- intervalo: 10 s por defecto;
-- bajo impacto;
-- útil para ver tendencias generales.
+- interval: 10 s by default;
+- low impact;
+- useful for seeing general trends.
 
 ```bash
-battery-auditor collect --mode passive --name seguimiento
+battery-auditor collect --mode passive --name tracking
 ```
 
 ### diagnostic
 
-Uso: descarga controlada normal.
+Use: normal controlled discharge.
 
-- intervalo: 2 s por defecto;
-- equilibrio entre precisión y bajo impacto.
+- interval: 2 s by default;
+- balance between precision and low impact.
 
 ```bash
-battery-auditor collect --mode diagnostic --name descarga-normal
+battery-auditor collect --mode diagnostic --name normal-discharge
 ```
 
 ### blackbox
 
-Uso: diagnóstico hasta apagado o fallo.
+Use: diagnostics until shutdown or failure.
 
-- intervalo: 1 s por defecto;
+- interval: 1 s by default;
 - SQLite `synchronous=FULL`;
-- flush por muestra;
-- heartbeat persistente.
+- flush on every sample;
+- persistent heartbeat.
 
 ```bash
-battery-auditor collect --mode blackbox --name descarga-final
+battery-auditor collect --mode blackbox --name final-discharge
 ```
 
-## Prueba recomendada para ThinkPad con dos baterías
+## Recommended test for a ThinkPad with two batteries
 
-1. Carga al estado habitual.
-2. Arranca el collector en modo `diagnostic` o `blackbox`.
-3. Desconecta AC.
-4. Cierra la UI si quieres mínima contaminación.
-5. Usa el equipo con una carga estable o déjalo en reposo controlado.
-6. Al terminar, exporta y analiza.
+1. Charge to your usual level.
+2. Start the collector in `diagnostic` or `blackbox` mode.
+3. Disconnect AC.
+4. Close the UI if you want minimal measurement noise.
+5. Use the machine under a stable load or leave it in a controlled idle state.
+6. When finished, export and analyze.
 
 ```bash
 battery-auditor sessions
 battery-auditor analyze
-battery-auditor export --format csv --out descarga.csv
+battery-auditor export --format csv --out discharge.csv
 ```
 
-## Qué buscar
+## What to look for
 
-### Mala calibración probable
+### Probable bad calibration
 
-- salto brusco de `capacity_percent`;
-- diferencia entre `capacity_percent` y `computed_percent`;
-- apagado cuando `energy_now` parece suficiente;
-- mejora tras recalibración.
+- sudden jump in `capacity_percent`;
+- gap between `capacity_percent` and `computed_percent`;
+- shutdown when `energy_now` still seems sufficient;
+- improvement after recalibration.
 
-### Degradación física probable
+### Probable physical degradation
 
-- `health_percent` bajo;
-- caída rápida de voltaje bajo carga;
-- apagado con porcentaje todavía alto;
-- poca autonomía incluso con porcentaje coherente.
+- low `health_percent`;
+- quick voltage sag under load;
+- shutdown while the percentage is still high;
+- poor runtime even when the percentage is coherent.
 
-### Comportamiento normal en doble batería
+### Normal dual-battery behavior
 
-- una batería descarga primero;
-- la otra queda estable;
-- hay cambio de batería activa sin saltos bruscos de energía.
+- one battery discharges first;
+- the other remains stable;
+- the active battery changes without abrupt energy jumps.
 
-## No contaminar la prueba
+## Avoid contaminating the test
 
-Durante una prueba seria:
+During a serious test:
 
-- no dejes navegador abierto con gráficas en vivo;
-- no ejecutes `tlp-stat` en bucle;
-- no exportes datos continuamente;
-- usa `diagnostic` o `blackbox` desde CLI/systemd;
-- abre la UI después.
+- do not leave a browser open with live charts;
+- do not run `tlp-stat` in a loop;
+- do not export data continuously;
+- use `diagnostic` or `blackbox` from the CLI/systemd;
+- open the UI afterwards.

@@ -1,6 +1,6 @@
-# Contribuir
+# Contributing
 
-## Flujo recomendado
+## Recommended workflow
 
 ```bash
 python3 -m venv .venv
@@ -10,10 +10,10 @@ pytest
 ruff check .
 ```
 
-## Principios del proyecto
+## Project principles
 
-- El collector debe seguir siendo ligero.
-- Las integraciones externas no deben entrar en el bucle de muestreo.
-- Las mediciones crudas deben conservarse en unidades sysfs.
-- La UI no debe ser requisito para grabar.
-- Las acciones destructivas o largas, como recalibración, deben ser explícitas.
+- The collector should remain lightweight.
+- External integrations should not enter the sampling loop.
+- Raw measurements should be preserved in sysfs units.
+- The UI should not be required for recording.
+- Destructive or long-running actions, such as recalibration, must be explicit.

@@ -6,7 +6,7 @@
 - SQLite WAL.
 - CLI.
 - UI Qt/PySide6.
-- Servicios systemd de usuario.
-- Exportación CSV/JSON.
-- Detección inicial de eventos.
-- Wrapper TLP manual.
+- User systemd services.
+- CSV/JSON export.
+- Initial event detection.
+- Manual TLP wrapper.
