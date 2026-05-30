@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 import os
 import platform
+import shutil
 import sqlite3
 import time
 from collections.abc import Iterable
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
@@ -13,6 +15,8 @@ from battery_auditor.config import AuditorConfig
 from battery_auditor.core.models import BatterySnapshot, Event, SystemSnapshot
 
 SCHEMA_VERSION = 1
+
+DATA_TABLES = ("sessions", "samples", "sample_batteries", "power_supplies", "events")
 
 
 SCHEMA_SQL = """
@@ -124,6 +128,17 @@ CREATE INDEX IF NOT EXISTS idx_events_session_time ON events(session_id, wall_ti
 """
 
 
+@dataclass(slots=True)
+class DatabaseRepairResult:
+    source_path: Path
+    repaired_path: Path
+    backup_path: Path | None = None
+    replaced: bool = False
+    copied: dict[str, int] = field(default_factory=dict)
+    failed: dict[str, int] = field(default_factory=dict)
+    integrity: str = ""
+
+
 class BatteryDatabase:
     def __init__(self, db_path: Path, cfg: AuditorConfig | None = None) -> None:
         self.db_path = db_path.expanduser()
@@ -137,7 +152,7 @@ class BatteryDatabase:
         conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
-        conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute(f"PRAGMA journal_mode = {self.cfg.sqlite_journal_mode}")
         conn.execute(f"PRAGMA synchronous = {self.cfg.sqlite_synchronous}")
         conn.execute(f"PRAGMA wal_autocheckpoint = {int(self.cfg.sqlite_wal_autocheckpoint_pages)}")
         self.conn = conn
@@ -153,6 +168,11 @@ class BatteryDatabase:
         conn.executescript(SCHEMA_SQL)
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         conn.commit()
+
+    def check_integrity(self, *, quick: bool = True) -> list[str]:
+        pragma = "quick_check" if quick else "integrity_check"
+        conn = self.connect()
+        return [str(row[0]) for row in conn.execute(f"PRAGMA {pragma}")]
 
     def start_session(self, session_id: str, name: str | None, cfg_json: str) -> None:
         from battery_auditor.core.models import wall_iso_from_timestamp
@@ -424,7 +444,17 @@ class BatteryDatabase:
             conn.execute(
                 """
                 SELECT id, name, started_at_iso, ended_at_iso, ended_reason,
-                       probable_power_loss, sample_count, last_heartbeat_iso
+                       probable_power_loss, sample_count, last_heartbeat_iso,
+                       (
+                         SELECT MAX(wall_iso)
+                           FROM samples
+                          WHERE samples.session_id = sessions.id
+                       ) AS last_sample_iso,
+                       (
+                         SELECT COUNT(*)
+                           FROM samples
+                          WHERE samples.session_id = sessions.id
+                       ) AS real_sample_count
                   FROM sessions
                  ORDER BY started_at_wall DESC
                  LIMIT ?
@@ -485,3 +515,147 @@ def none_bool_to_int(value: bool | None) -> int | None:
     if value is None:
         return None
     return 1 if value else 0
+
+
+def repair_database(
+    source_path: Path,
+    output_path: Path | None = None,
+    *,
+    replace: bool = False,
+) -> DatabaseRepairResult:
+    source = source_path.expanduser()
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    repaired = (output_path.expanduser() if output_path is not None else source.with_name(f"{source.name}.repaired-{stamp}"))
+    backup: Path | None = None
+
+    if repaired.exists():
+        repaired.unlink()
+
+    BatteryDatabase(repaired, AuditorConfig(db_path=repaired)).init_schema()
+    src = sqlite3.connect(source)
+    src.row_factory = sqlite3.Row
+    dst = sqlite3.connect(repaired)
+    dst.row_factory = sqlite3.Row
+    dst.execute("PRAGMA foreign_keys = OFF")
+
+    copied: dict[str, int] = {}
+    failed: dict[str, int] = {}
+    for table in DATA_TABLES:
+        table_copied, table_failed = _copy_repairable_rows(src, dst, table)
+        copied[table] = table_copied
+        failed[table] = table_failed
+        dst.commit()
+
+    _remove_orphaned_rows(dst)
+    _restore_sqlite_sequences(dst)
+    dst.execute("PRAGMA foreign_keys = ON")
+    dst.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    integrity = _single_pragma_value(dst, "PRAGMA integrity_check")
+    if integrity != "ok":
+        raise sqlite3.DatabaseError(f"Repaired database failed integrity_check: {integrity}")
+    fk_issues = list(dst.execute("PRAGMA foreign_key_check"))
+    if fk_issues:
+        raise sqlite3.DatabaseError(f"Repaired database has {len(fk_issues)} foreign key issue(s)")
+    dst.close()
+    src.close()
+
+    if replace:
+        backup = source.parent / "backups" / f"{source.name}.corrupt-{stamp}"
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, backup)
+        for suffix in ("-wal", "-shm"):
+            sidecar = Path(str(source) + suffix)
+            if sidecar.exists():
+                shutil.copy2(sidecar, backup.with_name(backup.name + suffix))
+                sidecar.unlink()
+        repaired.replace(source)
+        for suffix in ("-wal", "-shm"):
+            sidecar = Path(str(repaired) + suffix)
+            if sidecar.exists():
+                sidecar.unlink()
+
+    return DatabaseRepairResult(
+        source_path=source,
+        repaired_path=source if replace else repaired,
+        backup_path=backup,
+        replaced=replace,
+        copied=copied,
+        failed=failed,
+        integrity=integrity,
+    )
+
+
+def _copy_repairable_rows(
+    src: sqlite3.Connection,
+    dst: sqlite3.Connection,
+    table: str,
+) -> tuple[int, int]:
+    columns = [str(row["name"]) for row in dst.execute(f"PRAGMA table_info({table})")]
+    column_sql = ", ".join(columns)
+    placeholders = ", ".join("?" for _ in columns)
+    insert_sql = f"INSERT OR IGNORE INTO {table} ({column_sql}) VALUES ({placeholders})"
+
+    try:
+        bounds = src.execute(f"SELECT MIN(rowid), MAX(rowid) FROM {table}").fetchone()
+    except sqlite3.DatabaseError:
+        return 0, 1
+    if bounds is None or bounds[0] is None or bounds[1] is None:
+        return 0, 0
+
+    copied = 0
+    failed = 0
+    for rowid in range(int(bounds[0]), int(bounds[1]) + 1):
+        try:
+            row = src.execute(f"SELECT {column_sql} FROM {table} WHERE rowid = ?", (rowid,)).fetchone()
+            if row is None:
+                continue
+            dst.execute(insert_sql, [row[column] for column in columns])
+            copied += 1
+        except sqlite3.DatabaseError:
+            failed += 1
+    return copied, failed
+
+
+def _restore_sqlite_sequences(conn: sqlite3.Connection) -> None:
+    for table in DATA_TABLES:
+        rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+        if not any(row["name"] == "id" for row in rows):
+            continue
+        max_id = conn.execute(f"SELECT MAX(id) FROM {table}").fetchone()[0]
+        if max_id is not None:
+            conn.execute("INSERT OR REPLACE INTO sqlite_sequence (name, seq) VALUES (?, ?)", (table, max_id))
+    conn.commit()
+
+
+def _remove_orphaned_rows(conn: sqlite3.Connection) -> None:
+    conn.executescript(
+        """
+        DELETE FROM sample_batteries
+         WHERE sample_id NOT IN (SELECT id FROM samples)
+            OR session_id NOT IN (SELECT id FROM sessions);
+
+        DELETE FROM power_supplies
+         WHERE sample_id NOT IN (SELECT id FROM samples)
+            OR session_id NOT IN (SELECT id FROM sessions);
+
+        DELETE FROM events
+         WHERE session_id NOT IN (SELECT id FROM sessions)
+            OR (sample_id IS NOT NULL AND sample_id NOT IN (SELECT id FROM samples));
+
+        DELETE FROM samples
+         WHERE session_id NOT IN (SELECT id FROM sessions);
+
+        UPDATE sessions
+           SET sample_count = (
+               SELECT COUNT(*)
+                 FROM samples
+                WHERE samples.session_id = sessions.id
+           );
+        """
+    )
+    conn.commit()
+
+
+def _single_pragma_value(conn: sqlite3.Connection, sql: str) -> str:
+    row = conn.execute(sql).fetchone()
+    return str(row[0]) if row is not None else ""

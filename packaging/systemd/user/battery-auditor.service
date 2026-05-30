@@ -1,6 +1,6 @@
 [Unit]
 Description=Battery Auditor low-impact collector
-Documentation=README.md
+Documentation=https://github.com/angelrubiodev/battery-auditor
 After=graphical-session.target
 
 [Service]

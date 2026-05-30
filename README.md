@@ -10,7 +10,7 @@ Its main goal is not to save battery power, but to **diagnose batteries without 
 - Persistent SQLite writes with WAL.
 - Black-box mode for tests where the laptop may shut down because the battery runs out.
 - Event detection: AC changes, active battery changes, percentage jumps, sudden voltage sag, low/critical battery, and interrupted sessions.
-- Optional Python + Qt/PySide6 UI.
+- Optional Python + Qt/PySide6 UI with interactive pyqtgraph charts.
 - Manual TLP wrapper: `tlp-stat`, `setcharge`, `recalibrate`.
 - User-level systemd services.
 - CSV/JSON export for external analysis.
@@ -38,7 +38,7 @@ python -m pip install --upgrade pip
 python -m pip install -e '.[ui]'
 ```
 
-If you prefer to install PySide6 from Debian packages, install the `python3-pyside6*` packages available for your version and then run:
+If you prefer to install UI dependencies from Debian packages, install the `python3-pyside6*` and `python3-pyqtgraph` packages available for your version and then run:
 
 ```bash
 python -m pip install -e .

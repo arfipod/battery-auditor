@@ -49,6 +49,7 @@ class AuditorConfig:
     heartbeat_seconds: float = 2.0
 
     sqlite_synchronous: str = "NORMAL"
+    sqlite_journal_mode: str = "WAL"
     sqlite_wal_autocheckpoint_pages: int = 200
     blackbox_flush_each_sample: bool = False
 
@@ -130,6 +131,8 @@ def apply_config_dict(cfg: AuditorConfig, data: dict[str, Any]) -> None:
     sqlite = data.get("sqlite", {})
     if "synchronous" in sqlite:
         cfg.sqlite_synchronous = str(sqlite["synchronous"]).upper()
+    if "journal_mode" in sqlite:
+        cfg.sqlite_journal_mode = str(sqlite["journal_mode"]).upper()
     if "wal_autocheckpoint_pages" in sqlite:
         cfg.sqlite_wal_autocheckpoint_pages = int(sqlite["wal_autocheckpoint_pages"])
     if "blackbox_flush_each_sample" in sqlite:

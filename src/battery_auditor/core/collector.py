@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import fcntl
 import json
+import os
 import signal
 import time
 import uuid
@@ -28,6 +30,7 @@ class BatteryCollector:
         self.db = db or BatteryDatabase(cfg.resolved_db_path(), cfg)
         self.stop_requested = False
         self.detector = EventDetector(cfg)
+        self._lock_file: object | None = None
 
     def request_stop(self, *_args: object) -> None:
         self.stop_requested = True
@@ -50,66 +53,77 @@ class BatteryCollector:
     ) -> CollectorRunResult:
         self.cfg.data_dir.mkdir(parents=True, exist_ok=True)
         self.cfg.heartbeat_dir().mkdir(parents=True, exist_ok=True)
-        self.db.init_schema()
-        if recover_open_sessions:
-            self.db.recover_open_sessions()
-
-        interval = float(interval_seconds or self.cfg.interval_seconds)
-        self.cfg.interval_seconds = interval
-        session_id = self._new_session_id()
-        self.db.start_session(session_id=session_id, name=name, cfg_json=self.cfg.to_json())
-        self.install_signal_handlers()
-
-        reason = "stopped"
-        seq = 0
-        started_mono = time.monotonic()
-        next_deadline = started_mono
+        self._acquire_collector_lock()
         try:
-            while not self.stop_requested:
-                now_mono = time.monotonic()
-                if duration_seconds is not None and now_mono - started_mono >= duration_seconds:
-                    reason = "duration_elapsed"
-                    break
-                if now_mono < next_deadline:
-                    time.sleep(min(0.25, next_deadline - now_mono))
-                    continue
+            self.db.init_schema()
+            integrity = self.db.check_integrity(quick=True)
+            if integrity != ["ok"]:
+                raise RuntimeError(f"Refusing to collect into a damaged database: {'; '.join(integrity)}")
+            if recover_open_sessions:
+                self.db.recover_open_sessions()
 
-                loop_delay_ms = max(0.0, (now_mono - next_deadline) * 1000.0) if seq > 0 else 0.0
-                snap = self._sample(loop_delay_ms=loop_delay_ms)
-                events = self.detector.process(snap)
-                self.db.insert_snapshot(session_id, seq, snap, events)
-                self.db.update_heartbeat(session_id, snap.wall_time, snap.wall_iso, snap.monotonic_time)
-                self._write_heartbeat_file(session_id, seq, snap)
+            interval = float(interval_seconds or self.cfg.interval_seconds)
+            self.cfg.interval_seconds = interval
+            session_id = self._new_session_id()
+            self.db.start_session(session_id=session_id, name=name, cfg_json=self.cfg.to_json())
+            self.install_signal_handlers()
 
-                if blackbox or self.cfg.blackbox_flush_each_sample:
+            reason = "stopped"
+            seq = 0
+            started_mono = time.monotonic()
+            next_deadline = started_mono
+            try:
+                while not self.stop_requested:
+                    now_mono = time.monotonic()
+                    if duration_seconds is not None and now_mono - started_mono >= duration_seconds:
+                        reason = "duration_elapsed"
+                        break
+                    if now_mono < next_deadline:
+                        time.sleep(min(0.25, next_deadline - now_mono))
+                        continue
+
+                    loop_delay_ms = max(0.0, (now_mono - next_deadline) * 1000.0) if seq > 0 else 0.0
+                    snap = self._sample(loop_delay_ms=loop_delay_ms)
+                    events = self.detector.process(snap)
+                    self.db.insert_snapshot(session_id, seq, snap, events)
+                    self.db.update_heartbeat(session_id, snap.wall_time, snap.wall_iso, snap.monotonic_time)
+                    self._write_heartbeat_file(session_id, seq, snap)
+
+                    if blackbox or self.cfg.blackbox_flush_each_sample:
+                        self.db.flush_to_disk()
+
+                    seq += 1
+                    next_deadline += interval
+                    if next_deadline < time.monotonic() - interval:
+                        # If the process was paused or the system slept, avoid a catch-up storm.
+                        next_deadline = time.monotonic() + interval
+            except Exception as exc:  # noqa: BLE001 - top-level recorder must persist the error
+                reason = f"error:{type(exc).__name__}"
+                with suppress(Exception):
+                    self.db.insert_event(
+                        session_id,
+                        Event(
+                            "COLLECTOR_ERROR",
+                            "critical",
+                            f"Collector stopped because of an error: {exc}",
+                            details={"exception_type": type(exc).__name__, "exception": str(exc)},
+                        ),
+                    )
+                with suppress(Exception):
                     self.db.flush_to_disk()
-
-                seq += 1
-                next_deadline += interval
-                if next_deadline < time.monotonic() - interval:
-                    # If the process was paused or the system slept, avoid a catch-up storm.
-                    next_deadline = time.monotonic() + interval
-        except Exception as exc:  # noqa: BLE001 - top-level recorder must persist the error
-            reason = f"error:{type(exc).__name__}"
-            self.db.insert_event(
-                session_id,
-                Event(
-                    "COLLECTOR_ERROR",
-                    "critical",
-                    f"Collector stopped because of an error: {exc}",
-                    details={"exception_type": type(exc).__name__, "exception": str(exc)},
-                ),
-            )
-            self.db.flush_to_disk()
-            raise
+                raise
+            finally:
+                if self.stop_requested and reason == "stopped":
+                    reason = "signal_or_user_stop"
+                with suppress(Exception):
+                    self.db.end_session(session_id, reason=reason)
+                self._remove_heartbeat_file(session_id)
+                if blackbox or self.cfg.blackbox_flush_each_sample:
+                    with suppress(Exception):
+                        self.db.flush_to_disk()
+            return CollectorRunResult(session_id=session_id, samples=seq, reason=reason)
         finally:
-            if self.stop_requested and reason == "stopped":
-                reason = "signal_or_user_stop"
-            self.db.end_session(session_id, reason=reason)
-            self._remove_heartbeat_file(session_id)
-            if blackbox or self.cfg.blackbox_flush_each_sample:
-                self.db.flush_to_disk()
-        return CollectorRunResult(session_id=session_id, samples=seq, reason=reason)
+            self._release_collector_lock()
 
     def _sample(self, loop_delay_ms: float) -> SystemSnapshot:
         snap = read_snapshot(self.cfg.sysfs_power_supply_dir)
@@ -146,3 +160,27 @@ class BatteryCollector:
     def _remove_heartbeat_file(self, session_id: str) -> None:
         with suppress(FileNotFoundError):
             self._heartbeat_path(session_id).unlink()
+
+    def _acquire_collector_lock(self) -> None:
+        lock_path = self.cfg.data_dir / "collector.lock"
+        lock_file = lock_path.open("w", encoding="utf-8")
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            lock_file.close()
+            raise RuntimeError(f"Another Battery Auditor collector is already running: {lock_path}") from exc
+        lock_file.seek(0)
+        lock_file.truncate()
+        lock_file.write(str(os.getpid()))
+        lock_file.flush()
+        self._lock_file = lock_file
+
+    def _release_collector_lock(self) -> None:
+        if self._lock_file is None:
+            return
+        lock_file = self._lock_file
+        self._lock_file = None
+        with suppress(OSError):
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        with suppress(OSError):
+            lock_file.close()

@@ -32,13 +32,13 @@ python -m pip install -e .
 
 ## UI Qt
 
-The UI uses PySide6. You can install it with pip:
+The UI uses PySide6 and pyqtgraph. You can install both with pip:
 
 ```bash
 python -m pip install -e '.[ui]'
 ```
 
-Or with distribution packages if you have them available.
+Or install PySide6 and pyqtgraph with distribution packages if you have them available, then install the CLI package with `python -m pip install -e .`.
 
 ## systemd user service
 

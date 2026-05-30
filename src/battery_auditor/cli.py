@@ -14,7 +14,7 @@ from battery_auditor.core.analyzer import (
     summary_to_text,
 )
 from battery_auditor.core.collector import BatteryCollector
-from battery_auditor.core.database import BatteryDatabase
+from battery_auditor.core.database import BatteryDatabase, repair_database
 from battery_auditor.core.sysfs import read_snapshot
 from battery_auditor.core.tlp import TlpClient
 
@@ -59,6 +59,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     recover = sub.add_parser("recover", help="Mark open sessions as interrupted/probable power loss.")
     recover.add_argument("--reason", default="manual_recover")
+
+    repair = sub.add_parser("repair-db", help="Rebuild a readable SQLite database from a damaged one.")
+    repair.add_argument("--out", type=Path, help="Write the repaired database to this path.")
+    repair.add_argument("--replace", action="store_true", help="Back up and replace the configured database.")
 
     tlp_b = sub.add_parser("tlp-stat", help="Run tlp-stat on demand.")
     tlp_b.add_argument("section", choices=["battery", "config", "system"], default="battery", nargs="?")
@@ -121,6 +125,7 @@ def command_collect(args: argparse.Namespace, cfg: AuditorConfig) -> int:
     interval = args.interval if args.interval is not None else mode_interval[args.mode]
     if args.mode == "blackbox":
         cfg.sqlite_synchronous = "FULL"
+        cfg.sqlite_journal_mode = "TRUNCATE"
         cfg.blackbox_flush_each_sample = True
     collector = BatteryCollector(cfg)
     result = collector.run(
@@ -190,6 +195,21 @@ def command_recover(args: argparse.Namespace, cfg: AuditorConfig) -> int:
     return 0
 
 
+def command_repair_db(args: argparse.Namespace, cfg: AuditorConfig) -> int:
+    result = repair_database(cfg.resolved_db_path(), output_path=args.out, replace=args.replace)
+    print(f"Source: {result.source_path}")
+    print(f"Repaired: {result.repaired_path}")
+    if result.backup_path is not None:
+        print(f"Backup: {result.backup_path}")
+    print(f"Integrity: {result.integrity}")
+    print("Rows:")
+    for table in result.copied:
+        print(f"  {table}: copied={result.copied[table]} failed={result.failed[table]}")
+    if not result.replaced:
+        print("Original database was not replaced. Re-run with --replace after stopping collectors to swap it in.")
+    return 0
+
+
 def command_tlp_stat(args: argparse.Namespace) -> int:
     client = TlpClient(use_sudo=not args.no_sudo)
     if args.section == "battery":
@@ -227,6 +247,7 @@ def main(argv: list[str] | None = None) -> int:
         "analyze": command_analyze,
         "export": command_export,
         "recover": command_recover,
+        "repair-db": command_repair_db,
     }
     if args.command in commands:
         return int(commands[args.command](args, cfg))
