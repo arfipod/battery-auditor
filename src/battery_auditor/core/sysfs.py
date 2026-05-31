@@ -190,7 +190,9 @@ def read_process_metrics() -> tuple[int | None, float | None, float | None]:
     return rss_kib, user_cpu, system_cpu
 
 
-def read_system_load_metrics(previous: SystemLoadCounters | None = None) -> tuple[dict[str, float | int | None], SystemLoadCounters]:
+def read_system_load_metrics(
+    previous: SystemLoadCounters | None = None,
+) -> tuple[dict[str, float | int | bool | None], SystemLoadCounters]:
     now = time.monotonic()
     cpu_total, cpu_idle = _read_cpu_ticks()
     read_bytes, write_bytes = _read_disk_bytes()
@@ -201,7 +203,7 @@ def read_system_load_metrics(previous: SystemLoadCounters | None = None) -> tupl
         disk_read_bytes=read_bytes,
         disk_write_bytes=write_bytes,
     )
-    metrics: dict[str, float | int | None] = {
+    metrics: dict[str, float | int | bool | None] = {
         "system_cpu_percent": _cpu_percent(previous, counters),
         "system_load_1m": _read_load_1m(),
         **_read_memory_metrics(),
@@ -217,6 +219,8 @@ def read_system_load_metrics(previous: SystemLoadCounters | None = None) -> tupl
             previous.monotonic_time if previous else None,
             counters.monotonic_time,
         ),
+        **_read_display_brightness_metrics(),
+        **_read_radio_metrics(),
     }
     return metrics, counters
 
@@ -282,6 +286,61 @@ def _read_memory_metrics() -> dict[str, int | float | None]:
         "system_memory_available_kib": available,
         "system_memory_used_percent": used_percent,
     }
+
+
+def _read_display_brightness_metrics() -> dict[str, int | float | None]:
+    best: tuple[float, int, int] | None = None
+    try:
+        backlights = sorted(path for path in Path("/sys/class/backlight").iterdir() if path.is_dir() or path.is_symlink())
+    except (FileNotFoundError, PermissionError, OSError):
+        backlights = []
+    for backlight in backlights:
+        brightness = parse_int(read_text_file(backlight / "brightness"))
+        maximum = parse_int(read_text_file(backlight / "max_brightness"))
+        if brightness is None or maximum is None or maximum <= 0:
+            continue
+        percent = max(0.0, min(100.0, (brightness / maximum) * 100.0))
+        if best is None or maximum > best[2]:
+            best = (percent, brightness, maximum)
+    if best is None:
+        return {
+            "display_brightness_percent": None,
+            "display_brightness_raw": None,
+            "display_brightness_max": None,
+        }
+    percent, raw, maximum = best
+    return {
+        "display_brightness_percent": percent,
+        "display_brightness_raw": raw,
+        "display_brightness_max": maximum,
+    }
+
+
+def _read_radio_metrics() -> dict[str, bool | None]:
+    return {
+        "wifi_enabled": _read_rfkill_enabled("wlan"),
+        "bluetooth_enabled": _read_rfkill_enabled("bluetooth"),
+    }
+
+
+def _read_rfkill_enabled(kind: str) -> bool | None:
+    saw_device = False
+    saw_enabled = False
+    try:
+        rfkills = sorted(path for path in Path("/sys/class/rfkill").iterdir() if path.is_dir() or path.is_symlink())
+    except (FileNotFoundError, PermissionError, OSError):
+        return None
+    for rfkill in rfkills:
+        if read_text_file(rfkill / "type") != kind:
+            continue
+        saw_device = True
+        soft_blocked = parse_bool01(read_text_file(rfkill / "soft"))
+        hard_blocked = parse_bool01(read_text_file(rfkill / "hard"))
+        if soft_blocked is False and hard_blocked is False:
+            saw_enabled = True
+    if saw_enabled:
+        return True
+    return False if saw_device else None
 
 
 def _read_disk_bytes() -> tuple[int | None, int | None]:

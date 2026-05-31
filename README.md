@@ -129,6 +129,34 @@ Open the UI:
 battery-auditor-qt
 ```
 
+## Qt UI screenshots
+
+Status overview:
+
+![Qt status overview](docs/screenshots/qt-status.png)
+
+Recording controls:
+
+![Qt recording controls](docs/screenshots/qt-recording.png)
+
+Session management:
+
+![Qt session management](docs/screenshots/qt-sessions.png)
+
+Battery chart:
+
+![Qt battery chart](docs/screenshots/qt-chart-battery.png)
+
+System metric chart:
+
+![Qt system metric chart](docs/screenshots/qt-chart-system.png)
+
+Events and TLP tools:
+
+![Qt events table](docs/screenshots/qt-events.png)
+
+![Qt TLP tools](docs/screenshots/qt-tlp.png)
+
 ## Collector lifecycle
 
 Battery Auditor keeps collector runtime state under the configured data directory:

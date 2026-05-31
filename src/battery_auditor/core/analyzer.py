@@ -39,6 +39,9 @@ def summarize_session(db: BatteryDatabase, session_id: str) -> SessionSummary:
     system_memory: list[float] = []
     system_disk_read: list[float] = []
     system_disk_write: list[float] = []
+    display_brightness: list[float] = []
+    wifi_enabled: list[float] = []
+    bluetooth_enabled: list[float] = []
     first_time: float | None = None
     last_time: float | None = None
 
@@ -66,6 +69,12 @@ def summarize_session(db: BatteryDatabase, session_id: str) -> SessionSummary:
             system_disk_read.append(float(row["system_disk_read_bytes_per_second"]))
         if row["system_disk_write_bytes_per_second"] is not None:
             system_disk_write.append(float(row["system_disk_write_bytes_per_second"]))
+        if row["display_brightness_percent"] is not None:
+            display_brightness.append(float(row["display_brightness_percent"]))
+        if row["wifi_enabled"] is not None:
+            wifi_enabled.append(float(row["wifi_enabled"]))
+        if row["bluetooth_enabled"] is not None:
+            bluetooth_enabled.append(float(row["bluetooth_enabled"]))
 
     per_battery: dict[str, dict[str, Any]] = {}
     for battery, values in per_battery_values.items():
@@ -102,6 +111,9 @@ def summarize_session(db: BatteryDatabase, session_id: str) -> SessionSummary:
             "system_memory_used_percent": stats(system_memory),
             "system_disk_read_bytes_per_second": stats(system_disk_read),
             "system_disk_write_bytes_per_second": stats(system_disk_write),
+            "display_brightness_percent": stats(display_brightness),
+            "wifi_enabled": stats(wifi_enabled),
+            "bluetooth_enabled": stats(bluetooth_enabled),
         },
         event_counts=dict(sorted(event_counts.items())),
     )

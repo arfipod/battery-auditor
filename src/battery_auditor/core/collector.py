@@ -204,6 +204,11 @@ class BatteryCollector:
         snap.metrics.system_disk_write_bytes_per_second = _float_or_none(
             system_metrics["system_disk_write_bytes_per_second"]
         )
+        snap.metrics.display_brightness_percent = _float_or_none(system_metrics["display_brightness_percent"])
+        snap.metrics.display_brightness_raw = _int_or_none(system_metrics["display_brightness_raw"])
+        snap.metrics.display_brightness_max = _int_or_none(system_metrics["display_brightness_max"])
+        snap.metrics.wifi_enabled = _bool_or_none(system_metrics["wifi_enabled"])
+        snap.metrics.bluetooth_enabled = _bool_or_none(system_metrics["bluetooth_enabled"])
         return snap
 
     def _new_session_id(self) -> str:
@@ -306,9 +311,13 @@ class BatteryCollector:
             lock_path(self.cfg).unlink()
 
 
-def _float_or_none(value: float | int | None) -> float | None:
+def _float_or_none(value: float | int | bool | None) -> float | None:
     return None if value is None else float(value)
 
 
-def _int_or_none(value: float | int | None) -> int | None:
+def _int_or_none(value: float | int | bool | None) -> int | None:
     return None if value is None else int(value)
+
+
+def _bool_or_none(value: float | int | bool | None) -> bool | None:
+    return None if value is None else bool(value)

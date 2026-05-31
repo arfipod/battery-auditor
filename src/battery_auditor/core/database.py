@@ -14,7 +14,7 @@ from typing import Any, cast
 from battery_auditor.config import AuditorConfig
 from battery_auditor.core.models import BatterySnapshot, Event, SystemSnapshot
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 DATA_TABLES = ("sessions", "samples", "sample_batteries", "power_supplies", "events")
 
@@ -69,6 +69,11 @@ CREATE TABLE IF NOT EXISTS samples (
     system_memory_used_percent REAL,
     system_disk_read_bytes_per_second REAL,
     system_disk_write_bytes_per_second REAL,
+    display_brightness_percent REAL,
+    display_brightness_raw INTEGER,
+    display_brightness_max INTEGER,
+    wifi_enabled INTEGER,
+    bluetooth_enabled INTEGER,
     created_at_wall REAL NOT NULL,
     UNIQUE(session_id, seq)
 );
@@ -216,6 +221,17 @@ class BatteryDatabase:
                     "system_disk_write_bytes_per_second": "REAL",
                 },
             )
+        if current_version < 3:
+            self._add_missing_columns(
+                "samples",
+                {
+                    "display_brightness_percent": "REAL",
+                    "display_brightness_raw": "INTEGER",
+                    "display_brightness_max": "INTEGER",
+                    "wifi_enabled": "INTEGER",
+                    "bluetooth_enabled": "INTEGER",
+                },
+            )
 
     def _add_missing_columns(self, table: str, columns: dict[str, str]) -> None:
         conn = self.connect()
@@ -348,8 +364,10 @@ class BatteryDatabase:
               loop_delay_ms, system_cpu_percent, system_load_1m, system_memory_total_kib,
               system_memory_available_kib, system_memory_used_percent,
               system_disk_read_bytes_per_second, system_disk_write_bytes_per_second,
+              display_brightness_percent, display_brightness_raw, display_brightness_max,
+              wifi_enabled, bluetooth_enabled,
               created_at_wall
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 session_id,
@@ -377,6 +395,11 @@ class BatteryDatabase:
                 snap.metrics.system_memory_used_percent,
                 snap.metrics.system_disk_read_bytes_per_second,
                 snap.metrics.system_disk_write_bytes_per_second,
+                snap.metrics.display_brightness_percent,
+                snap.metrics.display_brightness_raw,
+                snap.metrics.display_brightness_max,
+                none_bool_to_int(snap.metrics.wifi_enabled),
+                none_bool_to_int(snap.metrics.bluetooth_enabled),
                 time.time(),
             ),
         )
@@ -604,6 +627,8 @@ class BatteryDatabase:
                    s.system_cpu_percent, s.system_load_1m, s.system_memory_total_kib,
                    s.system_memory_available_kib, s.system_memory_used_percent,
                    s.system_disk_read_bytes_per_second, s.system_disk_write_bytes_per_second,
+                   s.display_brightness_percent, s.display_brightness_raw, s.display_brightness_max,
+                   s.wifi_enabled, s.bluetooth_enabled,
                    b.name AS battery_name, b.status, b.capacity_percent, b.computed_percent,
                    b.health_percent, b.energy_now_uwh, b.energy_full_uwh, b.energy_full_design_uwh,
                    b.power_now_uw, b.voltage_now_uv, b.charge_control_start_threshold,
@@ -814,6 +839,11 @@ class BatteryDatabase:
             "system_memory_used_percent",
             "system_disk_read_bytes_per_second",
             "system_disk_write_bytes_per_second",
+            "display_brightness_percent",
+            "display_brightness_raw",
+            "display_brightness_max",
+            "wifi_enabled",
+            "bluetooth_enabled",
             "created_at_wall",
         ]
         values = [

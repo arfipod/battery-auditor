@@ -33,4 +33,7 @@ def test_system_load_metrics_return_stable_keys() -> None:
     assert "system_cpu_percent" in metrics
     assert "system_memory_used_percent" in metrics
     assert "system_disk_write_bytes_per_second" in metrics
+    assert "display_brightness_percent" in metrics
+    assert "wifi_enabled" in metrics
+    assert "bluetooth_enabled" in metrics
     assert "system_cpu_percent" in second_metrics

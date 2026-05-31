@@ -476,6 +476,9 @@ class MainWindow(QMainWindow):
             "system_memory_used_percent",
             "system_disk_read_mib_s",
             "system_disk_write_mib_s",
+            "display_brightness_percent",
+            "wifi_enabled",
+            "bluetooth_enabled",
         ])
         refresh = QPushButton("Update chart")
         export_csv = QPushButton("Export CSV")
@@ -677,12 +680,19 @@ class MainWindow(QMainWindow):
             return
         first_time = float(rows[0]["wall_time"])
         grouped: dict[str, list[tuple[float, float]]] = defaultdict(list)
+        seen_system_seq: set[int] = set()
         for row in rows:
+            if self._is_system_metric(metric):
+                seq = int(row["seq"])
+                if seq in seen_system_seq:
+                    continue
+                seen_system_seq.add(seq)
             value = self._metric_value(row, metric)
             if value is None:
                 continue
             minutes = (float(row["wall_time"]) - first_time) / 60.0
-            grouped[str(row["battery_name"])].append((minutes, float(value)))
+            name = "system" if self._is_system_metric(metric) else str(row["battery_name"])
+            grouped[name].append((minutes, float(value)))
         self.chart.set_data(f"{metric} — {session_id}", metric, sorted(grouped.items()))
 
     def refresh_sessions_and_chart(self, _checked: bool = False, *, prefer_running_session: bool = False) -> None:
@@ -794,6 +804,14 @@ class MainWindow(QMainWindow):
             )
         value = row[metric]
         return None if value is None else float(value)
+
+    @staticmethod
+    def _is_system_metric(metric: str) -> bool:
+        return metric.startswith("system_") or metric in {
+            "display_brightness_percent",
+            "wifi_enabled",
+            "bluetooth_enabled",
+        }
 
     def toggle_inactivity_guard(self, enabled: bool) -> None:
         if enabled:

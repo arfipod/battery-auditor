@@ -32,6 +32,9 @@ def test_insert_and_fetch_session(tmp_path: Path) -> None:
     assert "system_cpu_percent" in row_keys
     assert "system_memory_used_percent" in row_keys
     assert "system_disk_write_bytes_per_second" in row_keys
+    assert "display_brightness_percent" in row_keys
+    assert "wifi_enabled" in row_keys
+    assert "bluetooth_enabled" in row_keys
 
 
 def test_init_schema_tolerates_locked_journal_mode_pragma(tmp_path: Path, monkeypatch: Any) -> None:
@@ -187,7 +190,10 @@ def test_schema_migrates_v1_samples_table(tmp_path: Path) -> None:
     assert "system_cpu_percent" in columns
     assert "system_memory_available_kib" in columns
     assert "system_disk_read_bytes_per_second" in columns
-    assert db.connect().execute("PRAGMA user_version").fetchone()[0] == 2
+    assert "display_brightness_percent" in columns
+    assert "wifi_enabled" in columns
+    assert "bluetooth_enabled" in columns
+    assert db.connect().execute("PRAGMA user_version").fetchone()[0] == 3
 
 
 def test_recover_open_session(tmp_path: Path) -> None:

@@ -105,6 +105,11 @@ class CollectorMetrics:
     system_memory_used_percent: float | None = None
     system_disk_read_bytes_per_second: float | None = None
     system_disk_write_bytes_per_second: float | None = None
+    display_brightness_percent: float | None = None
+    display_brightness_raw: int | None = None
+    display_brightness_max: int | None = None
+    wifi_enabled: bool | None = None
+    bluetooth_enabled: bool | None = None
 
 
 @dataclass(slots=True)
