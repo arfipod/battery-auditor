@@ -144,7 +144,7 @@ class SessionManager(QWidget):
                 self._row_status(row, status),
                 str(row["started_at_iso"] or ""),
                 str(row["ended_at_iso"] or ""),
-                str(row["real_sample_count"] if "real_sample_count" in row else row["sample_count"]),
+                str(row["real_sample_count"]),
                 str(row["last_sample_iso"] or ""),
                 str(row["last_heartbeat_iso"] or ""),
                 "yes" if row["probable_power_loss"] else "no",
@@ -235,7 +235,6 @@ class SessionManager(QWidget):
             return
         finally:
             write_db.close()
-        self.db.close()
         self.refresh()
         self.refresh_main()
 
@@ -261,7 +260,6 @@ class SessionManager(QWidget):
             return
         finally:
             write_db.close()
-        self.db.close()
         self.refresh()
         self.refresh_main()
 
@@ -289,7 +287,6 @@ class SessionManager(QWidget):
             return
         finally:
             write_db.close()
-        self.db.close()
         self.refresh()
         self.refresh_main()
 
@@ -328,7 +325,6 @@ class SessionManager(QWidget):
             return
         finally:
             write_db.close()
-        self.db.close()
         self.refresh()
         self.refresh_main()
         self.open_in_chart(merged_id)
@@ -352,7 +348,6 @@ class SessionManager(QWidget):
             return
         finally:
             write_db.close()
-        self.db.close()
         QMessageBox.information(self, "Recover", f"Recovered {len(recovered)} session(s).")
         self.refresh()
         self.refresh_main()

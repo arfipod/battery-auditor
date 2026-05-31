@@ -147,6 +147,10 @@ Battery chart:
 
 ![Qt battery chart](docs/screenshots/qt-chart-battery.png)
 
+Event chart:
+
+![Qt event chart](docs/screenshots/qt-chart-events.png)
+
 System metric chart:
 
 ![Qt system metric chart](docs/screenshots/qt-chart-system.png)

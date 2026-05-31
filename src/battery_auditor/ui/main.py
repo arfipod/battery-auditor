@@ -30,7 +30,7 @@ BLACKBOX_SERVICE = "battery-auditor-blackbox.service"
 
 try:
     import pyqtgraph as pg  # type: ignore[import-untyped]
-    from PySide6.QtCore import QTimer
+    from PySide6.QtCore import Qt, QTimer
     from PySide6.QtGui import QAction
     from PySide6.QtWidgets import (
         QApplication,
@@ -76,22 +76,25 @@ class InactivityGuard:
             return
         inhibit = shutil.which("systemd-inhibit")
         if inhibit is not None:
-            self._inhibit_process = subprocess.Popen(
-                [
-                    inhibit,
-                    "--what=sleep:idle",
-                    "--mode=block",
-                    "--who=Battery Auditor",
-                    "--why=Battery measurement in progress",
-                    "sleep",
-                    "infinity",
-                ],
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True,
-                close_fds=True,
-            )
+            try:
+                self._inhibit_process = subprocess.Popen(
+                    [
+                        inhibit,
+                        "--what=sleep:idle",
+                        "--mode=block",
+                        "--who=Battery Auditor",
+                        "--why=Battery measurement in progress",
+                        "sleep",
+                        "infinity",
+                    ],
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
+                    close_fds=True,
+                )
+            except OSError:
+                self._inhibit_process = None
         self._screensaver_window_id = str(int(self.parent.winId()))
         self._run_quiet("xdg-screensaver", "suspend", self._screensaver_window_id)
         self._timer.start(20_000)
@@ -139,8 +142,10 @@ class BatteryChart(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.series: list[tuple[str, list[tuple[float, float]]]] = []
+        self.events: list[dict[str, Any]] = []
         self.y_label = ""
-        self._data_signature: tuple[str, str, tuple[str, ...]] | None = None
+        self._data_signature: tuple[Any, ...] | None = None
+        self._plot_items: dict[str, Any] = {}
         self.setMinimumHeight(320)
 
         layout = QVBoxLayout(self)
@@ -167,55 +172,93 @@ class BatteryChart(QWidget):
         self.plot.scene().sigMouseMoved.connect(self._mouse_moved)
         layout.addWidget(self.plot)
 
-    def set_data(self, title: str, y_label: str, series: list[tuple[str, list[tuple[float, float]]]]) -> None:
+    def set_data(
+        self,
+        title: str,
+        y_label: str,
+        series: list[tuple[str, list[tuple[float, float]]]],
+        events: list[dict[str, Any]] | None = None,
+    ) -> None:
         self.y_label = y_label
         self.series = series
-        signature = (title, y_label, tuple(name for name, _points in series))
-        should_fit = signature != self._data_signature
+        self.events = events or []
+        signature = (
+            title,
+            y_label,
+            tuple(name for name, _points in series),
+            tuple(
+                (
+                    float(event["minute"]),
+                    str(event.get("type", "")),
+                    str(event.get("severity", "")),
+                    str(event.get("battery", "")),
+                    str(event.get("message", "")),
+                )
+                for event in self.events
+            ),
+        )
+        structure_changed = signature != self._data_signature
+        should_fit = structure_changed
         self._data_signature = signature
-        self.plot.clear()
-        self.plot.setTitle(title)
-        self.plot.setLabel("left", y_label)
-        self.plot.setLabel("bottom", "minutes from start")
+        self.plot.setUpdatesEnabled(False)
+        try:
+            if structure_changed:
+                self.plot.clear()
+                self._plot_items.clear()
+            self.plot.setTitle(title)
+            self.plot.setLabel("left", y_label)
+            self.plot.setLabel("bottom", "minutes from start")
 
-        palette = [
-            "#2563eb",
-            "#dc2626",
-            "#16a34a",
-            "#9333ea",
-            "#ea580c",
-            "#0891b2",
-            "#be123c",
-            "#4f46e5",
-        ]
-        for index, (name, points) in enumerate(series):
-            if not points:
-                continue
-            color = palette[index % len(palette)]
-            x_values = [x for x, _y in points]
-            y_values = [y for _x, y in points]
-            self.plot.plot(
-                x_values,
-                y_values,
-                name=name,
-                pen=pg.mkPen(color, width=2),
-                symbol="o",
-                symbolBrush=color,
-                symbolPen=color,
-                symbolSize=5,
-            )
-        self._apply_zoom_axes()
-        if should_fit:
-            self.fit_full_graph()
+            palette = [
+                "#2563eb",
+                "#dc2626",
+                "#16a34a",
+                "#9333ea",
+                "#ea580c",
+                "#0891b2",
+                "#be123c",
+                "#4f46e5",
+            ]
+            live_names: set[str] = set()
+            for index, (name, points) in enumerate(series):
+                live_names.add(name)
+                color = palette[index % len(palette)]
+                x_values = [x for x, _y in points]
+                y_values = [y for _x, y in points]
+                item = self._plot_items.get(name)
+                if item is None:
+                    item = self.plot.plot(
+                        x_values,
+                        y_values,
+                        name=name,
+                        pen=pg.mkPen(color, width=2),
+                        symbol="o",
+                        symbolBrush=color,
+                        symbolPen=color,
+                        symbolSize=5,
+                    )
+                    self._plot_items[name] = item
+                else:
+                    item.setData(x_values, y_values)
+            for stale_name in set(self._plot_items) - live_names:
+                self.plot.removeItem(self._plot_items.pop(stale_name))
+            if structure_changed:
+                self._plot_events()
+            self._apply_zoom_axes()
+            if should_fit:
+                self.fit_full_graph()
+        finally:
+            self.plot.setUpdatesEnabled(True)
 
     def fit_full_graph(self) -> None:
         points = [point for _name, series_points in self.series for point in series_points]
-        if not points:
+        event_minutes = [float(event["minute"]) for event in self.events]
+        if not points and not event_minutes:
             self.plot.enableAutoRange(axis=pg.ViewBox.XYAxes, enable=True)
             self.plot.autoRange()
             return
-        x_values = [x for x, _y in points]
-        y_values = [y for _x, y in points]
+        x_values = [x for x, _y in points] + event_minutes
+        y_values = [y for _x, y in points] or [0.0, 1.0]
         self.plot.setRange(
             xRange=self._expanded_range(min(x_values), max(x_values)),
             yRange=self._expanded_range(min(y_values), max(y_values)),
@@ -234,19 +277,24 @@ class BatteryChart(QWidget):
         return (minimum - padding, maximum + padding)
 
     def _mouse_moved(self, pos: Any) -> None:
-        if not self.series or not self.plot.sceneBoundingRect().contains(pos):
+        if not (self.series or self.events) or not self.plot.sceneBoundingRect().contains(pos):
             QToolTip.hideText()
             return
         view_point = self.plot.plotItem.vb.mapSceneToView(pos)
         mouse_x = float(view_point.x())
         nearest = self._nearest_values(mouse_x)
-        if not nearest:
+        nearby_events = self._nearby_events(mouse_x)
+        if not nearest and not nearby_events:
             QToolTip.hideText()
             return
 
-        lines = [f"t = {nearest[0][1]:.2f} min"]
+        anchor_x = nearest[0][1] if nearest else float(nearby_events[0]["minute"])
+        lines = [f"t = {anchor_x:.2f} min"]
         for name, _x, value in nearest:
             lines.append(f"{name}: {value:.2f} {self.y_label}")
+        for event in nearby_events:
+            battery = f" [{event['battery']}]" if event.get("battery") else ""
+            lines.append(f"{event['severity']} {event['type']}{battery}: {event['message']}")
         global_pos = self.plot.mapToGlobal(pos.toPoint())
         QToolTip.showText(global_pos, "\n".join(lines), self.plot)
 
@@ -262,6 +310,51 @@ class BatteryChart(QWidget):
             return []
         anchor_x = nearest[0][1]
         return [(name, x, y) for name, x, y, _distance in nearest if abs(x - anchor_x) <= 0.05]
+
+    def _plot_events(self) -> None:
+        for event in self.events:
+            minute = float(event["minute"])
+            color = self._event_color(str(event["severity"]))
+            line = pg.InfiniteLine(
+                pos=minute,
+                angle=90,
+                movable=False,
+                pen=pg.mkPen(color, width=1, style=Qt.PenStyle.DashLine),
+            )
+            line.setToolTip(self._event_tooltip(event))
+            self.plot.addItem(line)
+        points = [point for _name, series_points in self.series for point in series_points]
+        y_anchor = max((y for _x, y in points), default=1.0)
+        for event in self.events[:40]:
+            minute = float(event["minute"])
+            color = self._event_color(str(event["severity"]))
+            label = pg.TextItem(str(event["type"]), color=color, anchor=(0, 1))
+            label.setPos(minute, y_anchor)
+            label.setAngle(90)
+            label.setToolTip(self._event_tooltip(event))
+            self.plot.addItem(label)
+
+    def _nearby_events(self, mouse_x: float) -> list[dict[str, Any]]:
+        return [event for event in self.events if abs(float(event["minute"]) - mouse_x) <= 0.05][:8]
+
+    @staticmethod
+    def _event_color(severity: str) -> str:
+        return {
+            "critical": "#dc2626",
+            "error": "#dc2626",
+            "warning": "#f59e0b",
+            "info": "#64748b",
+        }.get(severity.lower(), "#64748b")
+
+    @staticmethod
+    def _event_tooltip(event: dict[str, Any]) -> str:
+        battery = f"\nBattery: {event['battery']}" if event.get("battery") else ""
+        return (
+            f"{event['type']} ({event['severity']})"
+            f"{battery}\n"
+            f"t = {float(event['minute']):.2f} min\n"
+            f"{event['message']}"
+        )
 
 
 class MainWindow(QMainWindow):
@@ -319,7 +412,7 @@ class MainWindow(QMainWindow):
         self.db_status_label = QLabel("")
         refresh = QPushButton("Refresh status")
         repair = QPushButton("Repair database")
-        refresh.clicked.connect(self.refresh_live_snapshot)
+        refresh.clicked.connect(self.refresh_all)
         repair.clicked.connect(self.repair_database_from_ui)
         self.repair_db_button = repair
         row.addWidget(self.db_label)
@@ -479,6 +572,7 @@ class MainWindow(QMainWindow):
             "display_brightness_percent",
             "wifi_enabled",
             "bluetooth_enabled",
+            "event_count",
         ])
         refresh = QPushButton("Update chart")
         export_csv = QPushButton("Export CSV")
@@ -583,37 +677,53 @@ class MainWindow(QMainWindow):
             return
         current = self.session_combo.currentData() if hasattr(self, "session_combo") else None
         running_index: int | None = None
-        self.session_combo.blockSignals(True)
-        self.session_combo.clear()
+        items: list[tuple[str, str]] = []
         try:
             for row in self.db.list_sessions(limit=200):
                 status = row["ended_reason"] or "running"
-                sample_count = row["real_sample_count"] if "real_sample_count" in row else row["sample_count"]
+                sample_count = row["real_sample_count"]
                 last_sample = row["last_sample_iso"] or "no samples"
                 label = f"{status} | {row['started_at_iso']} | {row['id']} | {sample_count} samples | last {last_sample}"
-                self.session_combo.addItem(label, row["id"])
+                items.append((label, str(row["id"])))
                 if status == "running" and running_index is None:
-                    running_index = self.session_combo.count() - 1
+                    running_index = len(items) - 1
         except sqlite3.DatabaseError as exc:
             self._set_database_unavailable(exc)
             self.session_combo.clear()
-            self.session_combo.blockSignals(False)
             self._show_database_error()
             return
-        preferred_index = self.session_combo.findData(preferred_session_id) if preferred_session_id else -1
-        if preferred_index >= 0:
-            self.session_combo.setCurrentIndex(preferred_index)
-        elif prefer_running_session and running_index is not None:
-            self.session_combo.setCurrentIndex(running_index)
-        elif current:
-            index = self.session_combo.findData(current)
-            if index >= 0:
-                self.session_combo.setCurrentIndex(index)
+        was_blocked = self.session_combo.blockSignals(True)
+        try:
+            self._sync_session_combo_items(items)
+            preferred_index = self.session_combo.findData(preferred_session_id) if preferred_session_id else -1
+            if preferred_index >= 0:
+                self.session_combo.setCurrentIndex(preferred_index)
+            elif prefer_running_session and running_index is not None:
+                self.session_combo.setCurrentIndex(running_index)
+            elif current:
+                index = self.session_combo.findData(current)
+                if index >= 0:
+                    self.session_combo.setCurrentIndex(index)
+                elif running_index is not None:
+                    self.session_combo.setCurrentIndex(running_index)
             elif running_index is not None:
                 self.session_combo.setCurrentIndex(running_index)
-        elif running_index is not None:
-            self.session_combo.setCurrentIndex(running_index)
-        self.session_combo.blockSignals(False)
+        finally:
+            self.session_combo.blockSignals(was_blocked)
+
+    def _sync_session_combo_items(self, items: list[tuple[str, str]]) -> None:
+        same_order = self.session_combo.count() == len(items) and all(
+            str(self.session_combo.itemData(index)) == session_id
+            for index, (_label, session_id) in enumerate(items)
+        )
+        if same_order:
+            for index, (label, _session_id) in enumerate(items):
+                if self.session_combo.itemText(index) != label:
+                    self.session_combo.setItemText(index, label)
+            return
+        self.session_combo.clear()
+        for label, session_id in items:
+            self.session_combo.addItem(label, session_id)
 
     def refresh_collector_status(self) -> CollectorStatus:
         db = self.db if self.db_available else None
@@ -670,6 +780,7 @@ class MainWindow(QMainWindow):
                 self._chart_session_id = session_text
                 self._chart_rows = list(rows)
                 self._chart_last_seq = max((int(row["seq"]) for row in rows), default=None)
+            events = self.db.fetch_events(session_text, limit=1000)
         except sqlite3.DatabaseError as exc:
             self._set_database_unavailable(exc)
             self.chart.set_data("Database unavailable", metric, [])
@@ -679,21 +790,25 @@ class MainWindow(QMainWindow):
             self.chart.set_data("No data", metric, [])
             return
         first_time = float(rows[0]["wall_time"])
+        chart_events = self._chart_events(events, first_time)
         grouped: dict[str, list[tuple[float, float]]] = defaultdict(list)
-        seen_system_seq: set[int] = set()
-        for row in rows:
-            if self._is_system_metric(metric):
-                seq = int(row["seq"])
-                if seq in seen_system_seq:
+        if metric == "event_count":
+            grouped["events"] = self._event_count_series(chart_events)
+        else:
+            seen_system_seq: set[int] = set()
+            for row in rows:
+                if self._is_system_metric(metric):
+                    seq = int(row["seq"])
+                    if seq in seen_system_seq:
+                        continue
+                    seen_system_seq.add(seq)
+                value = self._metric_value(row, metric)
+                if value is None:
                     continue
-                seen_system_seq.add(seq)
-            value = self._metric_value(row, metric)
-            if value is None:
-                continue
-            minutes = (float(row["wall_time"]) - first_time) / 60.0
-            name = "system" if self._is_system_metric(metric) else str(row["battery_name"])
-            grouped[name].append((minutes, float(value)))
-        self.chart.set_data(f"{metric} — {session_id}", metric, sorted(grouped.items()))
+                minutes = (float(row["wall_time"]) - first_time) / 60.0
+                name = "system" if self._is_system_metric(metric) else str(row["battery_name"])
+                grouped[name].append((minutes, float(value)))
+        self.chart.set_data(f"{metric} — {session_id}", metric, sorted(grouped.items()), chart_events)
 
     def refresh_sessions_and_chart(self, _checked: bool = False, *, prefer_running_session: bool = False) -> None:
         preferred_session_id = self._active_collector_session_id if prefer_running_session else None
@@ -718,6 +833,31 @@ class MainWindow(QMainWindow):
         if current is not None and str(current) != (self._active_collector_session_id or ""):
             self._user_pinned_chart_session = True
         self.refresh_chart(force=True)
+
+    @staticmethod
+    def _chart_events(events: list[Any], first_time: float) -> list[dict[str, Any]]:
+        chart_events: list[dict[str, Any]] = []
+        for event in events:
+            wall_time = event["wall_time"]
+            if wall_time is None:
+                continue
+            chart_events.append(
+                {
+                    "minute": (float(wall_time) - first_time) / 60.0,
+                    "type": str(event["event_type"]),
+                    "severity": str(event["severity"]),
+                    "battery": None if event["battery_name"] is None else str(event["battery_name"]),
+                    "message": str(event["message"]),
+                }
+            )
+        return chart_events
+
+    @staticmethod
+    def _event_count_series(events: list[dict[str, Any]]) -> list[tuple[float, float]]:
+        counts: dict[float, int] = defaultdict(int)
+        for event in events:
+            counts[round(float(event["minute"]), 3)] += 1
+        return [(minute, float(count)) for minute, count in sorted(counts.items())]
 
     def refresh_events(self) -> None:
         if not self.db_available:
@@ -1154,16 +1294,27 @@ class MainWindow(QMainWindow):
         try:
             result = repair_database(self.cfg.resolved_db_path(), replace=True)
         except sqlite3.DatabaseError as exc:
-            self._set_database_unavailable(exc)
-            self._show_database_error()
+            self._restore_database_after_failed_repair(exc)
+            self._show_repair_failure_state(exc)
             QMessageBox.warning(self, "Repair database", f"Repair failed:\n{exc}")
             return
         except OSError as exc:
+            self._restore_database_after_failed_repair(exc)
+            self._show_repair_failure_state(exc)
             QMessageBox.warning(self, "Repair database", f"Repair failed:\n{exc}")
             return
 
-        self.db = BatteryDatabase(self.cfg.resolved_db_path(), self.cfg, read_only=True)
-        self.db.init_schema()
+        replacement = BatteryDatabase(self.cfg.resolved_db_path(), self.cfg, read_only=True)
+        try:
+            replacement.init_schema()
+        except sqlite3.DatabaseError as exc:
+            replacement.close()
+            self.db_available = False
+            self.db_error = f"Repair succeeded but database could not be reopened: {exc}"
+            self._show_database_error()
+            QMessageBox.warning(self, "Repair database", self._database_error_message())
+            return
+        self.db = replacement
         if hasattr(self, "sessions_manager"):
             self.sessions_manager.db = self.db
         self.db_available = True
@@ -1201,6 +1352,33 @@ class MainWindow(QMainWindow):
         self.db_error = None
         if hasattr(self, "db_status_label"):
             self.db_status_label.setText("")
+
+    def _restore_database_after_failed_repair(self, original_error: Exception) -> None:
+        replacement = BatteryDatabase(self.cfg.resolved_db_path(), self.cfg, read_only=True)
+        try:
+            replacement.init_schema()
+            integrity = replacement.check_integrity(quick=True)
+            if integrity != ["ok"]:
+                raise sqlite3.DatabaseError("; ".join(integrity))
+        except sqlite3.DatabaseError as exc:
+            replacement.close()
+            self.db_available = False
+            self.db_error = f"{original_error}; failed to reopen database after repair failure: {exc}"
+            return
+
+        self.db = replacement
+        if hasattr(self, "sessions_manager"):
+            self.sessions_manager.db = self.db
+        self.db_available = True
+        self.db_error = None
+
+    def _show_repair_failure_state(self, exc: Exception) -> None:
+        if not hasattr(self, "db_status_label"):
+            return
+        if self.db_available:
+            self.db_status_label.setText(f"Repair failed; original database reopened: {exc}")
+        else:
+            self._show_database_error()
 
     def _ensure_database_exists(self) -> None:
         db = BatteryDatabase(self.cfg.resolved_db_path(), self.cfg)
@@ -1243,7 +1421,10 @@ def _terminate_process_group(process: subprocess.Popen[bytes]) -> None:
             os.killpg(process.pid, signal.SIGKILL)
         except OSError:
             process.kill()
-        process.wait(timeout=5.0)
+        try:
+            process.wait(timeout=5.0)
+        except subprocess.TimeoutExpired:
+            return
 
 
 def main() -> int:
