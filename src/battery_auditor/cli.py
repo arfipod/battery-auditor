@@ -17,6 +17,12 @@ from battery_auditor.core.analyzer import (
 )
 from battery_auditor.core.collector import BatteryCollector
 from battery_auditor.core.database import BatteryDatabase, repair_database
+from battery_auditor.core.phase_analyzer import (
+    analyze_session_phases,
+    export_phases_csv,
+    export_phases_json,
+    phases_to_text,
+)
 from battery_auditor.core.runtime import (
     STATUS_PAUSED,
     STATUS_RUNNING,
@@ -85,8 +91,12 @@ def build_parser() -> argparse.ArgumentParser:
     merge_sessions.add_argument("--id", dest="merged_session_id", help="Optional merged session id.")
 
     analyze = sub.add_parser("analyze", help="Analyze a session.")
-    analyze.add_argument("session_id", nargs="?", help="Defaults to latest session.")
+    analyze.add_argument("session_id", nargs="?", help="Defaults to latest session. Use 'phases' for phase analysis.")
+    analyze.add_argument("phase_session_id", nargs="?", help=argparse.SUPPRESS)
     analyze.add_argument("--json", action="store_true")
+    analyze.add_argument("--phases", action="store_true", help="Show charge/discharge phases instead of the legacy summary.")
+    analyze.add_argument("--format", choices=["csv", "json"], default="csv", help="Export format for --phases --out.")
+    analyze.add_argument("--out", type=Path, help="Optional phase export path.")
 
     export = sub.add_parser("export", help="Export session samples.")
     export.add_argument("session_id", nargs="?", help="Defaults to latest session.")
@@ -317,10 +327,25 @@ def command_merge_sessions(args: argparse.Namespace, cfg: AuditorConfig) -> int:
 
 def command_analyze(args: argparse.Namespace, cfg: AuditorConfig) -> int:
     db = read_db_from_cfg(cfg)
-    session_id = args.session_id or db.latest_session_id()
+    phase_mode = bool(args.phases) or args.session_id == "phases"
+    session_id = args.phase_session_id if args.session_id == "phases" else args.session_id
+    session_id = session_id or db.latest_session_id()
     if session_id is None:
         print("No sessions found.", file=sys.stderr)
         return 2
+    if phase_mode:
+        phases = analyze_session_phases(db, session_id)
+        if args.out:
+            if args.format == "json":
+                export_phases_json(phases, args.out)
+            else:
+                export_phases_csv(phases, args.out)
+            print(f"Exported phases for {session_id} to {args.out}")
+        elif args.json:
+            print(json.dumps([phase.to_dict() for phase in phases], ensure_ascii=False, indent=2))
+        else:
+            print(phases_to_text(phases))
+        return 0
     summary = summarize_session(db, session_id)
     if args.json:
         print(json.dumps(summary, default=lambda o: getattr(o, "__dict__", str(o)), ensure_ascii=False, indent=2))

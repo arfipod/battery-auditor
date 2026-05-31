@@ -30,6 +30,7 @@ battery-auditor
 |  |-- collect
 |  |-- sessions
 |  |-- analyze
+|  |-- analyze phases
 |  |-- export
 |  `-- tlp-*
 |
@@ -69,6 +70,14 @@ Battery Auditor does not rely only on the global percentage. Each battery has:
 - charge thresholds exposed by sysfs.
 
 This makes it possible to distinguish normal firmware-controlled discharge from voltage sag, bad calibration, or physical degradation.
+
+## Phase analysis
+
+Raw samples are useful for charts, but dual-battery behavior is often easier to reason about as phases. A phase is a semantically stable run of samples where AC state, active discharging battery, active charging battery, and durable battery statuses stay the same. The analyzer debounces state changes so one-sample status noise does not create false phases, and short transitions can be kept as `MIXED_TRANSITION` instead of pretending they are a clean charge or discharge span.
+
+The phase analyzer is intentionally post-processing only. It reads existing `samples` and `sample_batteries` rows through the normal read-only database path and does not run inside the collector loop.
+
+On Lenovo dual-battery systems such as a ThinkPad T460s, firmware commonly charges or drains one pack while the other remains nearly flat. For example, BAT0 can discharge with BAT1 idle, then after AC connects BAT1 can charge while BAT0 stays flat. The analyzer preserves that behavior by computing per-battery signed Wh deltas, detecting inactive near-zero batteries, and classifying stable spans as `DISCHARGE_BAT0`, `DISCHARGE_BAT1`, `CHARGE_BAT0`, `CHARGE_BAT1`, `AC_IDLE`, `MIXED_TRANSITION`, or `UNKNOWN`.
 
 ## Events
 

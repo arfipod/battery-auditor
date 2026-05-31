@@ -117,6 +117,20 @@ Analyze the latest session:
 battery-auditor analyze
 ```
 
+Show semantic charge/discharge phases:
+
+```bash
+battery-auditor analyze phases
+battery-auditor analyze --phases <session_id>
+```
+
+Export phases:
+
+```bash
+battery-auditor analyze --phases <session_id> --format csv --out phases.csv
+battery-auditor analyze --phases <session_id> --format json --out phases.json
+```
+
 Export to CSV:
 
 ```bash
@@ -203,6 +217,22 @@ battery-auditor analyze
 The exact shutdown instant cannot be measured after the machine loses power, but it can be bracketed by the last persisted heartbeat/sample and the configured interval.
 
 Normal `battery-auditor stop` sends `SIGTERM`, allowing the collector to end the session with `signal_or_user_stop`. Force stop sends `SIGKILL` and can leave the session open because the collector cannot run its clean shutdown path. Use `battery-auditor recover` after reboot or after a force stop if a session remains open.
+
+## Phase analysis
+
+A phase is a stable span of samples with the same power context: AC state, active charging battery, active discharging battery, and durable battery statuses. The phase analyzer runs after collection from stored SQLite samples, so it does not add work to the sampling loop and old databases remain readable.
+
+Dual-battery ThinkPads such as the T460s do not necessarily charge or discharge both packs uniformly. Firmware often chooses one pack at a time, so BAT0 may discharge while BAT1 stays almost flat, then BAT1 may become active later. Phase analysis turns that raw per-sample behavior into summaries with signed Wh deltas, average signed power, active battery inference, and classifications such as `DISCHARGE_BAT0`, `CHARGE_BAT1`, and `AC_IDLE`.
+
+Example output:
+
+```text
+#  Start                End                  Dur    AC   Classification  Disch  Chg   BAT0 dWh  BAT1 dWh  Total dWh
+-  -------------------  -------------------  -----  ---  --------------  -----  ----  --------  --------  ---------
+0  2023-11-14 22:13:20  2023-11-14 22:16:20  3m00s  off  DISCHARGE_BAT0  BAT0   -     -3.000    0.000     -3.000
+1  2023-11-14 22:17:20  2023-11-14 22:20:20  3m00s  on   CHARGE_BAT1     -      BAT1  0.000     3.000     3.000
+2  2023-11-14 22:21:20  2023-11-14 22:24:20  3m00s  off  DISCHARGE_BAT1  BAT1   -     0.000     -3.000    -3.000
+```
 
 ## User systemd services
 
