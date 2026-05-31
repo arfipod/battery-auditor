@@ -51,6 +51,19 @@ Relevant fields:
 - `collector_user_cpu_seconds`
 - `collector_system_cpu_seconds`
 - `loop_delay_ms`
+- `system_cpu_percent`
+- `system_load_1m`
+- `system_memory_total_kib`
+- `system_memory_available_kib`
+- `system_memory_used_percent`
+- `system_disk_read_bytes_per_second`
+- `system_disk_write_bytes_per_second`
+- `display_brightness_percent`
+- `display_brightness_raw`
+- `display_brightness_max`
+- `wifi_enabled`
+- `bluetooth_enabled`
+- `created_at_wall`
 
 ## `sample_batteries`
 
@@ -113,3 +126,15 @@ Energy/power/voltage sysfs paths usually come in micro-units:
 - `voltage_now`: microvolt (`uV`)
 
 Battery Auditor preserves these raw units and calculates Wh/W/V views in the CLI/UI when needed.
+
+Additional units and encodings:
+
+- `sample_duration_ms`, `db_write_duration_ms`, and `loop_delay_ms`: milliseconds
+- `collector_rss_kib`, `system_memory_total_kib`, `system_memory_available_kib`: KiB
+- `collector_user_cpu_seconds`, `collector_system_cpu_seconds`: process CPU seconds
+- `system_cpu_percent`, `system_memory_used_percent`, `display_brightness_percent`: percent
+- `system_load_1m`: Linux 1-minute load average
+- `system_disk_read_bytes_per_second`, `system_disk_write_bytes_per_second`: bytes per second
+- `display_brightness_raw`, `display_brightness_max`: raw `/sys/class/backlight` brightness values
+- `ac_online`, `present`, `online`, `wifi_enabled`, `bluetooth_enabled`: nullable booleans stored as `1`, `0`, or `NULL`
+- `created_at_wall`: wall-clock insertion time for the SQLite row

@@ -255,14 +255,14 @@ TLP actions are manual and are not part of the periodic collector, so they do no
 
 For each sample, Battery Auditor stores:
 
-- wall-clock and ISO timestamp;
-- monotonic timestamp;
-- AC state;
-- computed total energy;
-- total power;
-- computed total percentage;
-- internal collector metrics;
-- per battery: status, reported percentage, Wh-based computed percentage, health, energy, power, voltage, cycles, technology, manufacturer, model, serial number, and thresholds exposed by sysfs.
+- timestamps: wall-clock, ISO, monotonic time, and sequence number;
+- power state: AC online state, active battery names, computed total energy, total full/design energy, total power, computed total percentage, and total health percentage;
+- collector overhead: sample read time, SQLite write time, collector RSS, collector user/system CPU seconds, and loop delay;
+- system load context: CPU usage percentage, 1-minute load average, total/available memory, memory used percentage, and disk read/write bytes per second;
+- environment context: display brightness percentage/raw/max value, WiFi enabled state, and Bluetooth enabled state;
+- per battery: presence, status, reported percentage, Wh-based computed percentage, health, capacity level, energy, power, voltage, cycle count, technology, manufacturer, model, serial number, charge thresholds, charge behaviour, and raw sysfs values;
+- non-battery power supplies: name, type, online state, and raw sysfs values;
+- events: type, severity, battery, message, timestamps, and structured details.
 
 See more in [`docs/SCHEMA.md`](docs/SCHEMA.md).
 
