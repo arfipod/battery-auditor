@@ -114,12 +114,16 @@ def test_led_write_falls_back_to_pkexec_when_sysfs_denies_permission(
     calls: list[Any] = []
 
     def fake_which(name: str) -> str | None:
-        return "/usr/bin/pkexec" if name == "pkexec" else None
+        if name == "pkexec":
+            return "/usr/bin/pkexec"
+        if name == "thinkpad-energy-manager-sysfs-write":
+            return "/usr/bin/thinkpad-energy-manager-sysfs-write"
+        return None
 
     def fake_run(command: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
         calls.append(command)
         brightness.chmod(0o644)
-        brightness.write_text(f"{command[-2]}\n", encoding="utf-8")
+        brightness.write_text(f"{command[-1]}\n", encoding="utf-8")
         brightness.chmod(0o444)
         return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
@@ -129,4 +133,47 @@ def test_led_write_falls_back_to_pkexec_when_sysfs_denies_permission(
     device = controls.set_led_brightness("tpacpi::lid_logo_dot", 42)
 
     assert device.brightness == 42
-    assert calls and calls[0][:3] == ["pkexec", "/bin/sh", "-c"]
+    assert calls and calls[0][0] == "pkexec"
+    assert calls[0][1].endswith("thinkpad-energy-manager-sysfs-write")
+    assert calls[0][-2:] == [str(brightness), "42"]
+
+
+def test_pkexec_prefers_stable_usr_bin_helper(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    led = tmp_path / "leds" / "tpacpi::lid_logo_dot"
+    led.mkdir(parents=True)
+    brightness = led / "brightness"
+    brightness.write_text("0\n", encoding="utf-8")
+    brightness.chmod(0o444)
+    (led / "max_brightness").write_text("255\n", encoding="utf-8")
+    calls: list[Any] = []
+    original_exists = Path.exists
+
+    def fake_which(name: str) -> str | None:
+        if name == "pkexec":
+            return "/usr/bin/pkexec"
+        if name == "thinkpad-energy-manager-sysfs-write":
+            return "/home/user/project/.venv/bin/thinkpad-energy-manager-sysfs-write"
+        return None
+
+    def fake_exists(self: Path) -> bool:
+        if str(self) == "/usr/bin/thinkpad-energy-manager-sysfs-write":
+            return True
+        return original_exists(self)
+
+    def fake_run(command: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        calls.append(command)
+        brightness.chmod(0o644)
+        brightness.write_text(f"{command[-1]}\n", encoding="utf-8")
+        brightness.chmod(0o444)
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr("thinkpad_energy_manager.core.system_controls.shutil.which", fake_which)
+    monkeypatch.setattr("thinkpad_energy_manager.core.system_controls.Path.exists", fake_exists)
+    controls = SystemControls(leds_root=tmp_path / "leds", runner=fake_run)
+
+    controls.set_led_brightness("tpacpi::lid_logo_dot", 42)
+
+    assert calls[0][1] == "/usr/bin/thinkpad-energy-manager-sysfs-write"

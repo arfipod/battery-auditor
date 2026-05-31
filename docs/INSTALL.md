@@ -71,6 +71,37 @@ Or call the virtualenv entry point directly without activating:
 ./.venv/bin/thinkpad-energy-manager-qt
 ```
 
+## Optional polkit policy for hardware controls
+
+The ThinkPad tab can change backlight, LED, and rfkill sysfs controls. Without a local polkit policy, each privileged write may ask for authentication separately.
+
+For a system install where the helper is available as `/usr/bin/thinkpad-energy-manager-sysfs-write`, install the policy:
+
+```bash
+sudo install -Dm644 packaging/polkit/com.github.arfipod.thinkpad-energy-manager.policy \
+  /usr/share/polkit-1/actions/com.github.arfipod.thinkpad-energy-manager.policy
+```
+
+With this policy, polkit asks on the first privileged hardware-control action and may keep that authorization for later actions in the active desktop session. If your helper lives somewhere else, adjust the `org.freedesktop.policykit.exec.path` annotation in the policy before installing it.
+
+When running from `.venv`, create a stable `/usr/bin` wrapper for polkit. Regenerate the editable entry points first so the helper exists:
+
+```bash
+source .venv/bin/activate
+python -m pip install -e '.[ui]'
+./.venv/bin/thinkpad-energy-manager-sysfs-write --help
+
+sudo tee /usr/bin/thinkpad-energy-manager-sysfs-write >/dev/null <<EOF
+#!/bin/sh
+exec "$(pwd)/.venv/bin/thinkpad-energy-manager-sysfs-write" "\$@"
+EOF
+
+sudo chmod 755 /usr/bin/thinkpad-energy-manager-sysfs-write
+/usr/bin/thinkpad-energy-manager-sysfs-write --help
+```
+
+If the checkout moves or `.venv` is recreated, run the same block again so `/usr/bin/thinkpad-energy-manager-sysfs-write` points at the new helper.
+
 If the project directory or `.venv` was copied or renamed and the entry point fails with `No such file or directory`, regenerate the wrappers from this checkout:
 
 ```bash

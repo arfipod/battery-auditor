@@ -43,7 +43,7 @@ PERSISTENT_DATABASE_ERROR_MARKERS = (
 
 try:
     import pyqtgraph as pg  # type: ignore[import-untyped]
-    from PySide6.QtCore import Qt, QTimer
+    from PySide6.QtCore import QEvent, QObject, Qt, QTimer
     from PySide6.QtGui import QAction, QColor
     from PySide6.QtWidgets import (
         QApplication,
@@ -396,6 +396,10 @@ class MainWindow(QMainWindow):
         self.inactivity_guard = InactivityGuard(self)
         self.load_process: subprocess.Popen[bytes] | None = None
         self.system_controls = SystemControls()
+        self._syncing_system_control_inputs = False
+        self._backlight_dirty = False
+        self._led_dirty = False
+        self._led_restore_context: dict[str, int] | None = None
 
         self.setWindowTitle("ThinkPad Energy Manager")
         self.resize(1080, 760)
@@ -712,16 +716,21 @@ class MainWindow(QMainWindow):
         self.backlight_value = QSpinBox()
         self.backlight_value.setRange(0, 100)
         self.backlight_value.setSuffix(" %")
-        apply_backlight = QPushButton("Apply")
+        self.apply_backlight_button = QPushButton("Apply")
         self.backlight_combo.currentIndexChanged.connect(self._select_backlight)
         self.backlight_slider.valueChanged.connect(self.backlight_value.setValue)
         self.backlight_value.valueChanged.connect(self.backlight_slider.setValue)
-        apply_backlight.clicked.connect(self.apply_backlight)
+        self.backlight_slider.valueChanged.connect(self._mark_backlight_dirty)
+        self.backlight_value.valueChanged.connect(self._mark_backlight_dirty)
+        self.backlight_slider.installEventFilter(self)
+        self.backlight_value.installEventFilter(self)
+        self.apply_backlight_button.installEventFilter(self)
+        self.apply_backlight_button.clicked.connect(self.apply_backlight)
         brightness_form.addWidget(QLabel("Device"))
         brightness_form.addWidget(self.backlight_combo)
         brightness_form.addWidget(self.backlight_slider, 1)
         brightness_form.addWidget(self.backlight_value)
-        brightness_form.addWidget(apply_backlight)
+        brightness_form.addWidget(self.apply_backlight_button)
         brightness_layout.addLayout(brightness_form)
         self.backlight_table = QTableWidget(0, 5)
         self.backlight_table.setHorizontalHeaderLabels(["Device", "Current", "Max", "Percent", "Writable"])
@@ -734,14 +743,24 @@ class MainWindow(QMainWindow):
         self.led_combo = QComboBox()
         self.led_value = QSpinBox()
         self.led_value.setRange(0, 255)
-        apply_led = QPushButton("Apply")
+        self.apply_led_button = QPushButton("Apply")
+        self.lights_off_button = QPushButton("All off")
+        self.restore_lights_button = QPushButton("Restore")
         self.led_combo.currentIndexChanged.connect(self._select_led)
-        apply_led.clicked.connect(self.apply_led)
+        self.led_value.valueChanged.connect(self._mark_led_dirty)
+        self.led_value.installEventFilter(self)
+        self.apply_led_button.installEventFilter(self)
+        self.apply_led_button.clicked.connect(self.apply_led)
+        self.lights_off_button.clicked.connect(self.turn_off_all_lights)
+        self.restore_lights_button.clicked.connect(self.restore_lights_context)
+        self.restore_lights_button.setEnabled(False)
         lights_form.addWidget(QLabel("LED"))
         lights_form.addWidget(self.led_combo, 1)
         lights_form.addWidget(QLabel("Brightness"))
         lights_form.addWidget(self.led_value)
-        lights_form.addWidget(apply_led)
+        lights_form.addWidget(self.apply_led_button)
+        lights_form.addWidget(self.lights_off_button)
+        lights_form.addWidget(self.restore_lights_button)
         lights_layout.addLayout(lights_form)
         self.led_table = QTableWidget(0, 5)
         self.led_table.setHorizontalHeaderLabels(["LED", "Current", "Max", "Trigger", "Writable"])
@@ -1146,13 +1165,14 @@ class MainWindow(QMainWindow):
         self._backlight_devices = {device.name: device for device in backlights}
         self._sync_device_combo(self.backlight_combo, [(device.name, device.name) for device in backlights])
         self._populate_backlight_table(backlights)
-        self._select_backlight()
+        self._select_backlight(preserve_dirty=True)
 
         leds = self.system_controls.list_leds()
         self._led_devices = {device.name: device for device in leds}
         self._sync_device_combo(self.led_combo, [(device.name, device.name) for device in leds])
         self._populate_led_table(leds)
-        self._select_led()
+        self._select_led(preserve_dirty=True)
+        self.restore_lights_button.setEnabled(bool(self._led_restore_context))
 
         radios = self.system_controls.list_rfkill()
         self._rfkill_devices = {device.name: device for device in radios}
@@ -1236,32 +1256,100 @@ class MainWindow(QMainWindow):
         finally:
             combo.blockSignals(was_blocked)
 
-    def _select_backlight(self, _index: int | None = None) -> None:
+    def _select_backlight(self, _index: int | None = None, *, preserve_dirty: bool = False) -> None:
         if not hasattr(self, "_backlight_devices"):
             return
         name = self.backlight_combo.currentData()
         device = self._backlight_devices.get(str(name)) if name is not None else None
         if device is None:
+            self._backlight_dirty = False
             self.backlight_slider.setEnabled(False)
             self.backlight_value.setEnabled(False)
             return
+        if self._backlight_dirty and preserve_dirty:
+            self.backlight_slider.setEnabled(device.writable)
+            self.backlight_value.setEnabled(device.writable)
+            return
+        if not preserve_dirty:
+            self._backlight_dirty = False
         value = int(round(device.percent))
         self.backlight_slider.setEnabled(device.writable)
         self.backlight_value.setEnabled(device.writable)
-        self.backlight_slider.setValue(value)
-        self.backlight_value.setValue(value)
+        self._set_backlight_inputs(value)
 
-    def _select_led(self, _index: int | None = None) -> None:
+    def _select_led(self, _index: int | None = None, *, preserve_dirty: bool = False) -> None:
         if not hasattr(self, "_led_devices"):
             return
         name = self.led_combo.currentData()
         device = self._led_devices.get(str(name)) if name is not None else None
         if device is None:
+            self._led_dirty = False
             self.led_value.setEnabled(False)
             return
+        if self._led_dirty and preserve_dirty:
+            self.led_value.setEnabled(device.writable)
+            self.led_value.setRange(0, max(0, int(device.max_brightness)))
+            return
+        if not preserve_dirty:
+            self._led_dirty = False
         self.led_value.setEnabled(device.writable)
         self.led_value.setRange(0, max(0, int(device.max_brightness)))
-        self.led_value.setValue(int(device.brightness))
+        self._set_led_input(int(device.brightness))
+
+    def _set_backlight_inputs(self, value: int) -> None:
+        was_syncing = self._syncing_system_control_inputs
+        self._syncing_system_control_inputs = True
+        try:
+            self.backlight_slider.setValue(value)
+            self.backlight_value.setValue(value)
+        finally:
+            self._syncing_system_control_inputs = was_syncing
+
+    def _set_led_input(self, value: int) -> None:
+        was_syncing = self._syncing_system_control_inputs
+        self._syncing_system_control_inputs = True
+        try:
+            self.led_value.setValue(value)
+        finally:
+            self._syncing_system_control_inputs = was_syncing
+
+    def _mark_backlight_dirty(self, _value: int) -> None:
+        if not self._syncing_system_control_inputs:
+            self._backlight_dirty = True
+
+    def _mark_led_dirty(self, _value: int) -> None:
+        if not self._syncing_system_control_inputs:
+            self._led_dirty = True
+
+    def _discard_backlight_edit(self) -> None:
+        if self._backlight_dirty:
+            self._backlight_dirty = False
+            self._select_backlight()
+
+    def _discard_led_edit(self) -> None:
+        if self._led_dirty:
+            self._led_dirty = False
+            self._select_led()
+
+    def _discard_backlight_edit_if_unfocused(self) -> None:
+        if QApplication.focusWidget() not in {
+            self.backlight_slider,
+            self.backlight_value,
+            self.apply_backlight_button,
+        }:
+            self._discard_backlight_edit()
+
+    def _discard_led_edit_if_unfocused(self) -> None:
+        if QApplication.focusWidget() not in {self.led_value, self.apply_led_button}:
+            self._discard_led_edit()
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if event.type() == QEvent.Type.FocusOut:
+            if watched in {self.backlight_slider, self.backlight_value, self.apply_backlight_button}:
+                QTimer.singleShot(0, self._discard_backlight_edit_if_unfocused)
+            elif watched in {self.led_value, self.apply_led_button}:
+                QTimer.singleShot(0, self._discard_led_edit_if_unfocused)
+        return super().eventFilter(watched, event)
 
     def apply_backlight(self) -> None:
         name = self.backlight_combo.currentData()
@@ -1274,6 +1362,7 @@ class MainWindow(QMainWindow):
             self._append_system_control_message(f"Display brightness failed: {exc}")
             QMessageBox.warning(self, "Display brightness", str(exc))
             return
+        self._backlight_dirty = False
         self._append_system_control_message(f"{device.name}: brightness set to {device.percent:.0f}%.")
         self.refresh_system_controls()
 
@@ -1288,7 +1377,58 @@ class MainWindow(QMainWindow):
             self._append_system_control_message(f"LED control failed: {exc}")
             QMessageBox.warning(self, "ThinkPad lights", str(exc))
             return
+        self._led_dirty = False
         self._append_system_control_message(f"{device.name}: brightness set to {device.brightness}/{device.max_brightness}.")
+        self.refresh_system_controls()
+
+    def turn_off_all_lights(self) -> None:
+        devices = [device for device in self.system_controls.list_leds() if device.writable]
+        if not devices:
+            QMessageBox.information(self, "ThinkPad lights", "No writable LED devices were detected.")
+            return
+        if self._led_restore_context is None:
+            self._led_restore_context = {device.name: int(device.brightness) for device in devices}
+
+        failed: list[str] = []
+        changed = 0
+        for device in devices:
+            try:
+                self.system_controls.set_led_brightness(device.name, 0)
+                changed += 1
+            except (OSError, ValueError) as exc:
+                failed.append(f"{device.name}: {exc}")
+
+        self._led_dirty = False
+        if changed:
+            self._append_system_control_message(f"Lights override enabled: {changed} LED device(s) set to 0.")
+        if failed:
+            message = "\n".join(failed)
+            self._append_system_control_message(f"Lights override partially failed:\n{message}")
+            QMessageBox.warning(self, "ThinkPad lights", message)
+        self.refresh_system_controls()
+
+    def restore_lights_context(self) -> None:
+        if not self._led_restore_context:
+            QMessageBox.information(self, "ThinkPad lights", "No saved lights context is available.")
+            return
+
+        context = dict(self._led_restore_context)
+        self._led_restore_context = None
+        failed: list[str] = []
+        restored = 0
+        for name, brightness in context.items():
+            try:
+                self.system_controls.set_led_brightness(name, brightness)
+                restored += 1
+            except (OSError, ValueError) as exc:
+                failed.append(f"{name}: {exc}")
+
+        self._led_dirty = False
+        if restored:
+            self._append_system_control_message(f"Lights override cleared: restored {restored} LED device(s).")
+        if failed:
+            self._append_system_control_message("Lights restore partially failed:\n" + "\n".join(failed))
+            QMessageBox.warning(self, "ThinkPad lights", "\n".join(failed))
         self.refresh_system_controls()
 
     def apply_rfkill(self, enabled: bool) -> None:

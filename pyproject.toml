@@ -36,6 +36,7 @@ dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10"]
 [project.scripts]
 thinkpad-energy-manager = "thinkpad_energy_manager.cli:main"
 thinkpad-energy-manager-qt = "thinkpad_energy_manager.ui.main:main"
+thinkpad-energy-manager-sysfs-write = "thinkpad_energy_manager.core.sysfs_writer:main"
 
 [project.urls]
 Homepage = "https://github.com/arfipod/thinkpad-energy-manager"

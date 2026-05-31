@@ -12,6 +12,7 @@ Its main goal is not to save battery power, but to **diagnose batteries without 
 - Event detection: AC changes, active battery changes, percentage jumps, sudden voltage sag, low/critical battery, and interrupted sessions.
 - Optional Python + Qt/PySide6 UI with interactive pyqtgraph charts.
 - ThinkPad controls tab for display brightness, keyboard and chassis LEDs, rfkill radios, screen idle timeout, suspend/hibernate/power-off actions, and delayed shutdown.
+- Optional polkit helper for privileged hardware writes, so the desktop can authenticate once and reuse the authorization instead of prompting for every sysfs write.
 - Manual TLP wrapper: `tlp-stat`, `setcharge`, `recalibrate`.
 - User-level systemd services.
 - CSV/JSON export for external analysis.
@@ -44,6 +45,71 @@ If you prefer to install UI dependencies from Debian packages, install the `pyth
 
 ```bash
 python -m pip install -e .
+```
+
+## Privileged hardware controls
+
+Most of the app runs as your normal user. Some controls in the ThinkPad tab need privileged writes to sysfs, for example:
+
+- `/sys/class/backlight/*/brightness`
+- `/sys/class/leds/*/brightness`
+- `/sys/class/rfkill/*/soft`
+
+When your user cannot write those files directly, the UI falls back to:
+
+```bash
+pkexec thinkpad-energy-manager-sysfs-write <path> <value>
+```
+
+The helper is intentionally small: it only accepts the supported sysfs paths above and single-line values. With the optional polkit policy installed, polkit may ask for your admin password on the first privileged hardware-control action and then keep that authorization for later actions in the active desktop session.
+
+For a system install where the helper exists at `/usr/bin/thinkpad-energy-manager-sysfs-write`, install the policy with:
+
+```bash
+sudo install -Dm644 packaging/polkit/com.github.arfipod.thinkpad-energy-manager.policy \
+  /usr/share/polkit-1/actions/com.github.arfipod.thinkpad-energy-manager.policy
+```
+
+### Using the helper from `.venv`
+
+If you run the project from a virtual environment, keep using the app exactly as before:
+
+```bash
+./.venv/bin/thinkpad-energy-manager-qt
+```
+
+Polkit, however, matches the policy against a stable executable path. First make sure the current entry points exist inside `.venv`:
+
+```bash
+source .venv/bin/activate
+python -m pip install -e '.[ui]'
+./.venv/bin/thinkpad-energy-manager-sysfs-write --help
+```
+
+Then create a tiny wrapper in `/usr/bin` that delegates to the helper inside your current checkout:
+
+```bash
+sudo tee /usr/bin/thinkpad-energy-manager-sysfs-write >/dev/null <<EOF
+#!/bin/sh
+exec "$(pwd)/.venv/bin/thinkpad-energy-manager-sysfs-write" "\$@"
+EOF
+
+sudo chmod 755 /usr/bin/thinkpad-energy-manager-sysfs-write
+```
+
+Then install the polkit policy shown above.
+
+If you move the repository, recreate `.venv`, or reinstall the editable package, regenerate the wrapper from the new checkout path:
+
+```bash
+source .venv/bin/activate
+python -m pip install -e '.[ui]'
+sudo tee /usr/bin/thinkpad-energy-manager-sysfs-write >/dev/null <<EOF
+#!/bin/sh
+exec "$(pwd)/.venv/bin/thinkpad-energy-manager-sysfs-write" "\$@"
+EOF
+sudo chmod 755 /usr/bin/thinkpad-energy-manager-sysfs-write
+/usr/bin/thinkpad-energy-manager-sysfs-write --help
 ```
 
 ## Quick start

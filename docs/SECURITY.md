@@ -12,6 +12,14 @@ The SQLite database is stored in the user's state directory:
 ~/.local/state/thinkpad-energy-manager/
 ```
 
+The Qt hardware controls write a constrained set of sysfs files:
+
+- `/sys/class/backlight/*/brightness`
+- `/sys/class/leds/*/brightness`
+- `/sys/class/rfkill/*/soft`
+
+When direct user writes are denied, the UI uses `pkexec thinkpad-energy-manager-sysfs-write ...`. The helper refuses other paths and multiline values. Installing the optional polkit policy lets polkit keep authentication for the active session instead of prompting on every write.
+
 ## TLP
 
 TLP actions may require `sudo`:

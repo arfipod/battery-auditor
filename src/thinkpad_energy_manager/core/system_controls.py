@@ -309,15 +309,11 @@ class SystemControls:
     def _write_value_with_pkexec(self, path: Path, value: int | str) -> None:
         if shutil.which("pkexec") is None:
             raise PermissionError(f"Permission denied: {path}")
-        command = [
-            "pkexec",
-            "/bin/sh",
-            "-c",
-            'printf "%s\\n" "$1" > "$2"',
-            "thinkpad-energy-manager-write",
-            str(value),
-            str(path),
-        ]
+        system_helper = Path("/usr/bin/thinkpad-energy-manager-sysfs-write")
+        helper = str(system_helper) if system_helper.exists() else shutil.which("thinkpad-energy-manager-sysfs-write")
+        if helper is None:
+            raise PermissionError("thinkpad-energy-manager-sysfs-write was not found in PATH.")
+        command = ["pkexec", helper, str(path), str(value)]
         completed = self._runner(command, capture_output=True, check=False, text=True)
         if completed.returncode != 0:
             output = "\n".join(part for part in ((completed.stdout or "").strip(), (completed.stderr or "").strip()) if part)
