@@ -4,11 +4,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from battery_auditor.cli import main as cli_main
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.database import BatteryDatabase
-from battery_auditor.core.models import BatterySnapshot, PowerSupplySnapshot, SystemSnapshot
-from battery_auditor.core.phase_analyzer import (
+from thinkpad_energy_manager.cli import main as cli_main
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.database import BatteryDatabase
+from thinkpad_energy_manager.core.models import BatterySnapshot, PowerSupplySnapshot, SystemSnapshot
+from thinkpad_energy_manager.core.phase_analyzer import (
     PHASE_CHARGE_BAT1,
     PHASE_DISCHARGE_BAT0,
     PHASE_DISCHARGE_BAT1,

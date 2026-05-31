@@ -4,11 +4,11 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.database import DATA_TABLES, BatteryDatabase, repair_database
-from battery_auditor.core.events import EventDetector
-from battery_auditor.core.models import Event
-from battery_auditor.core.sysfs import read_snapshot
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.database import DATA_TABLES, BatteryDatabase, repair_database
+from thinkpad_energy_manager.core.events import EventDetector
+from thinkpad_energy_manager.core.models import Event
+from thinkpad_energy_manager.core.sysfs import read_snapshot
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sysfs_sample"
 

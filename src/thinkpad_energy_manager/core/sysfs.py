@@ -5,7 +5,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from battery_auditor.core.models import BatterySnapshot, PowerSupplySnapshot, SystemSnapshot
+from thinkpad_energy_manager.core.models import BatterySnapshot, PowerSupplySnapshot, SystemSnapshot
 
 BATTERY_FIELDS = {
     "present",

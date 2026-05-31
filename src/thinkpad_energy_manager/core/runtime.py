@@ -10,8 +10,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.models import wall_iso_from_timestamp
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.models import wall_iso_from_timestamp
 
 STATUS_RUNNING = "RUNNING"
 STATUS_PAUSED = "PAUSED"
@@ -225,7 +225,7 @@ def process_looks_like_collector(cmdline: list[str], comm: str | None = None) ->
     lowered = [item.lower() for item in cmdline]
     has_collect = any(item == "collect" for item in lowered)
     has_energy_manager = any(
-        "thinkpad-energy-manager" in item or "battery-auditor" in item or "battery_auditor" in item
+        "thinkpad-energy-manager" in item or "thinkpad_energy_manager" in item
         for item in lowered
     )
     if has_collect and has_energy_manager:
@@ -234,8 +234,7 @@ def process_looks_like_collector(cmdline: list[str], comm: str | None = None) ->
         comm
         and (
             "thinkpad-energy-manager" in comm.lower()
-            or "battery-auditor" in comm.lower()
-            or "battery_auditor" in comm.lower()
+            or "thinkpad_energy_manager" in comm.lower()
         )
         and has_collect
     ):

@@ -5,19 +5,19 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from battery_auditor.cli import main as cli_main
-from battery_auditor.config import AuditorConfig, TlpThresholdExpectation, load_config
-from battery_auditor.core.collector import BatteryCollector
-from battery_auditor.core.database import BatteryDatabase
-from battery_auditor.core.models import BatterySnapshot, PowerSupplySnapshot, SystemSnapshot
-from battery_auditor.core.sleep_monitor import (
+from thinkpad_energy_manager.cli import main as cli_main
+from thinkpad_energy_manager.config import AuditorConfig, TlpThresholdExpectation, load_config
+from thinkpad_energy_manager.core.collector import BatteryCollector
+from thinkpad_energy_manager.core.database import BatteryDatabase
+from thinkpad_energy_manager.core.models import BatterySnapshot, PowerSupplySnapshot, SystemSnapshot
+from thinkpad_energy_manager.core.sleep_monitor import (
     RESUMED,
     SleepMonitor,
     SleepMonitorEvent,
     SleepMonitorUnavailable,
     make_sleep_monitor_event,
 )
-from battery_auditor.core.thresholds import (
+from thinkpad_energy_manager.core.thresholds import (
     STATUS_MISMATCH,
     STATUS_OK,
     STATUS_UNKNOWN,
@@ -31,7 +31,7 @@ from battery_auditor.core.thresholds import (
     samples_from_rows,
     threshold_event_findings,
 )
-from battery_auditor.core.tlp import CommandResult
+from thinkpad_energy_manager.core.tlp import CommandResult
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sysfs_sample"
 

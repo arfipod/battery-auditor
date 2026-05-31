@@ -12,11 +12,11 @@ from contextlib import suppress
 from dataclasses import dataclass
 from typing import TextIO
 
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.database import BatteryDatabase
-from battery_auditor.core.events import EventDetector
-from battery_auditor.core.models import Event, SystemSnapshot
-from battery_auditor.core.runtime import (
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.database import BatteryDatabase
+from thinkpad_energy_manager.core.events import EventDetector
+from thinkpad_energy_manager.core.models import Event, SystemSnapshot
+from thinkpad_energy_manager.core.runtime import (
     control_path,
     lock_path,
     read_control_state,
@@ -25,7 +25,7 @@ from battery_auditor.core.runtime import (
     write_heartbeat,
     write_lock_payload,
 )
-from battery_auditor.core.sleep_monitor import (
+from thinkpad_energy_manager.core.sleep_monitor import (
     RESUME_SAMPLE_TAKEN,
     RESUMED,
     SLEEP_MONITOR_UNAVAILABLE,
@@ -33,13 +33,13 @@ from battery_auditor.core.sleep_monitor import (
     SleepMonitorEvent,
     build_sleep_monitor,
 )
-from battery_auditor.core.sysfs import (
+from thinkpad_energy_manager.core.sysfs import (
     SystemLoadCounters,
     read_process_metrics,
     read_snapshot,
     read_system_load_metrics,
 )
-from battery_auditor.core.thresholds import (
+from thinkpad_energy_manager.core.thresholds import (
     STATUS_MISMATCH,
     THRESHOLD_MISMATCH,
     CommandRunner,
@@ -439,7 +439,7 @@ class BatteryCollector:
 
     @staticmethod
     def _wall_iso(timestamp: float) -> str:
-        from battery_auditor.core.models import wall_iso_from_timestamp
+        from thinkpad_energy_manager.core.models import wall_iso_from_timestamp
 
         return wall_iso_from_timestamp(timestamp)
 

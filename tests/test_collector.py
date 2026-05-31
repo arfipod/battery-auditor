@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.collector import BatteryCollector
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.collector import BatteryCollector
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sysfs_sample"
 

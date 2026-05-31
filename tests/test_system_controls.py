@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from battery_auditor.core.system_controls import SystemControls
+from thinkpad_energy_manager.core.system_controls import SystemControls
 
 
 def test_backlight_percent_writes_scaled_raw_value(tmp_path: Path) -> None:
@@ -64,7 +64,7 @@ def test_screen_timeout_uses_available_xset_and_gsettings(monkeypatch: Any) -> N
         calls.append((command, kwargs))
         return subprocess.CompletedProcess(command, 0, stdout="ok\n", stderr="")
 
-    monkeypatch.setattr("battery_auditor.core.system_controls.shutil.which", fake_which)
+    monkeypatch.setattr("thinkpad_energy_manager.core.system_controls.shutil.which", fake_which)
     controls = SystemControls(runner=fake_run)
 
     results = controls.set_screen_idle_timeout(300)
@@ -123,7 +123,7 @@ def test_led_write_falls_back_to_pkexec_when_sysfs_denies_permission(
         brightness.chmod(0o444)
         return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
-    monkeypatch.setattr("battery_auditor.core.system_controls.shutil.which", fake_which)
+    monkeypatch.setattr("thinkpad_energy_manager.core.system_controls.shutil.which", fake_which)
     controls = SystemControls(leds_root=tmp_path / "leds", runner=fake_run)
 
     device = controls.set_led_brightness("tpacpi::lid_logo_dot", 42)

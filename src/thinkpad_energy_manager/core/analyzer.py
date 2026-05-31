@@ -8,7 +8,7 @@ from pathlib import Path
 from statistics import mean
 from typing import Any
 
-from battery_auditor.core.database import BatteryDatabase
+from thinkpad_energy_manager.core.database import BatteryDatabase
 
 
 @dataclass(slots=True)

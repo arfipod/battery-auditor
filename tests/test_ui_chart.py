@@ -11,7 +11,7 @@ pg = pytest.importorskip("pyqtgraph")
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from battery_auditor.ui.main import BatteryChart  # noqa: E402
+from thinkpad_energy_manager.ui.main import BatteryChart  # noqa: E402
 
 
 def test_battery_chart_zoom_modes_and_fit_full_graph() -> None:

@@ -12,26 +12,26 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from battery_auditor.config import AuditorConfig, load_config
-from battery_auditor.core.analyzer import export_session_csv
-from battery_auditor.core.battery_model import estimate_session, estimate_to_text
-from battery_auditor.core.database import BatteryDatabase, repair_database
-from battery_auditor.core.runtime import (
+from thinkpad_energy_manager.config import AuditorConfig, load_config
+from thinkpad_energy_manager.core.analyzer import export_session_csv
+from thinkpad_energy_manager.core.battery_model import estimate_session, estimate_to_text
+from thinkpad_energy_manager.core.database import BatteryDatabase, repair_database
+from thinkpad_energy_manager.core.runtime import (
     STATUS_PAUSED,
     STATUS_RUNNING,
     STATUS_UNKNOWN,
     CollectorStatus,
     collect_runtime_status,
 )
-from battery_auditor.core.sysfs import read_snapshot
-from battery_auditor.core.system_controls import CommandResult, SystemControls
-from battery_auditor.core.thresholds import (
+from thinkpad_energy_manager.core.sysfs import read_snapshot
+from thinkpad_energy_manager.core.system_controls import CommandResult, SystemControls
+from thinkpad_energy_manager.core.thresholds import (
     STATUS_MISMATCH,
     analyze_session_thresholds,
     plan_threshold_restores,
 )
-from battery_auditor.core.tlp import TlpClient
-from battery_auditor.ui.session_manager import SessionManager
+from thinkpad_energy_manager.core.tlp import TlpClient
+from thinkpad_energy_manager.ui.session_manager import SessionManager
 
 BLACKBOX_SERVICE = "thinkpad-energy-manager-blackbox.service"
 PERSISTENT_DATABASE_ERROR_MARKERS = (
@@ -1459,7 +1459,7 @@ class MainWindow(QMainWindow):
         args = [
             sys.executable,
             "-m",
-            "battery_auditor.core.loadgen",
+            "thinkpad_energy_manager.core.loadgen",
             "--cpu-workers",
             str(self.load_cpu_workers.value()),
             "--cpu-duty",
@@ -1548,7 +1548,7 @@ class MainWindow(QMainWindow):
         args = [
             sys.executable,
             "-m",
-            "battery_auditor.cli",
+            "thinkpad_energy_manager.cli",
             "--db",
             str(self.cfg.resolved_db_path()),
             "--sysfs",
@@ -1610,7 +1610,7 @@ class MainWindow(QMainWindow):
             [
                 sys.executable,
                 "-m",
-                "battery_auditor.cli",
+                "thinkpad_energy_manager.cli",
                 "--db",
                 str(self.cfg.resolved_db_path()),
                 "--sysfs",

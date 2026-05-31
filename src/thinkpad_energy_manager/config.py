@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 APP_NAME = "thinkpad-energy-manager"
-LEGACY_APP_NAME = "battery-auditor"
 
 
 def _default_state_dir() -> Path:
@@ -23,13 +22,6 @@ def _default_config_dir() -> Path:
     if xdg_config:
         return Path(xdg_config) / APP_NAME
     return Path.home() / ".config" / APP_NAME
-
-
-def _legacy_config_dir() -> Path:
-    xdg_config = os.environ.get("XDG_CONFIG_HOME")
-    if xdg_config:
-        return Path(xdg_config) / LEGACY_APP_NAME
-    return Path.home() / ".config" / LEGACY_APP_NAME
 
 
 @dataclass(slots=True)
@@ -121,8 +113,6 @@ class AuditorConfig:
 DEFAULT_CONFIG_PATHS = [
     Path("/etc/thinkpad-energy-manager/config.toml"),
     _default_config_dir() / "config.toml",
-    Path(f"/etc/{LEGACY_APP_NAME}/config.toml"),
-    _legacy_config_dir() / "config.toml",
 ]
 
 

@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=ThinkPad Energy Manager
-Comment=ThinkPad battery, lighting, radio, and power controls
-Exec=thinkpad-energy-manager-qt
-Icon=battery
-Terminal=false
-Categories=System;Monitor;Qt;

@@ -8,10 +8,10 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from battery_auditor.config import AuditorConfig, TlpThresholdExpectation
-from battery_auditor.core.database import BatteryDatabase
-from battery_auditor.core.models import Event
-from battery_auditor.core.tlp import CommandResult
+from thinkpad_energy_manager.config import AuditorConfig, TlpThresholdExpectation
+from thinkpad_energy_manager.core.database import BatteryDatabase
+from thinkpad_energy_manager.core.models import Event
+from thinkpad_energy_manager.core.tlp import CommandResult
 
 THRESHOLD_MISMATCH = "THRESHOLD_MISMATCH"
 THRESHOLD_RESTORED = "THRESHOLD_RESTORED"

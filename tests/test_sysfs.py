@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from battery_auditor.core.sysfs import read_snapshot, read_system_load_metrics
+from thinkpad_energy_manager.core.sysfs import read_snapshot, read_system_load_metrics
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sysfs_sample"
 

@@ -3,9 +3,9 @@ from __future__ import annotations
 from copy import deepcopy
 from pathlib import Path
 
-from battery_auditor.config import AuditorConfig, TlpThresholdExpectation
-from battery_auditor.core.events import EventDetector
-from battery_auditor.core.sysfs import read_snapshot
+from thinkpad_energy_manager.config import AuditorConfig, TlpThresholdExpectation
+from thinkpad_energy_manager.core.events import EventDetector
+from thinkpad_energy_manager.core.sysfs import read_snapshot
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sysfs_sample"
 

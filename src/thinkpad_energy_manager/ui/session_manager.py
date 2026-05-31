@@ -8,15 +8,15 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.analyzer import (
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.analyzer import (
     export_session_csv,
     export_session_json,
     summarize_session,
     summary_to_text,
 )
-from battery_auditor.core.database import BatteryDatabase
-from battery_auditor.core.runtime import (
+from thinkpad_energy_manager.core.database import BatteryDatabase
+from thinkpad_energy_manager.core.runtime import (
     STATUS_PAUSED,
     STATUS_RUNNING,
     STATUS_UNKNOWN,

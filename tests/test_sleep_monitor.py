@@ -5,9 +5,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.collector import BatteryCollector
-from battery_auditor.core.sleep_monitor import (
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.collector import BatteryCollector
+from thinkpad_energy_manager.core.sleep_monitor import (
     ABOUT_TO_SLEEP,
     RESUME_SAMPLE_TAKEN,
     RESUMED,
@@ -102,7 +102,7 @@ class _FakeMonitor(SleepMonitor):
 
 class _UnavailableMonitor(SleepMonitor):
     def start(self) -> Any:
-        from battery_auditor.core.sleep_monitor import SleepMonitorUnavailable
+        from thinkpad_energy_manager.core.sleep_monitor import SleepMonitorUnavailable
 
         return SleepMonitorUnavailable(reason="not available in test")
 

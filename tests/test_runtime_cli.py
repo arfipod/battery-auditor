@@ -8,10 +8,10 @@ import time
 from pathlib import Path
 from typing import Any
 
-from battery_auditor.cli import main as cli_main
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.database import BatteryDatabase
-from battery_auditor.core.runtime import (
+from thinkpad_energy_manager.cli import main as cli_main
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.database import BatteryDatabase
+from thinkpad_energy_manager.core.runtime import (
     collect_runtime_status,
     control_path,
     lock_path,
@@ -131,7 +131,7 @@ def test_collector_pause_resume_records_events_and_heartbeat(tmp_path: Path) -> 
         [
             sys.executable,
             "-m",
-            "battery_auditor.cli",
+            "thinkpad_energy_manager.cli",
             "--config",
             str(config_path),
             "collect",

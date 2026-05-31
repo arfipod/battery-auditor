@@ -4,16 +4,16 @@ import json
 from pathlib import Path
 from typing import Any
 
-from battery_auditor.cli import main as cli_main
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.battery_model import (
+from thinkpad_energy_manager.cli import main as cli_main
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.battery_model import (
     ACTIVE_DISCHARGING,
     RESERVE,
     BatteryModelConfig,
     estimate_session,
 )
-from battery_auditor.core.database import BatteryDatabase
-from battery_auditor.core.models import BatterySnapshot, PowerSupplySnapshot, SystemSnapshot
+from thinkpad_energy_manager.core.database import BatteryDatabase
+from thinkpad_energy_manager.core.models import BatterySnapshot, PowerSupplySnapshot, SystemSnapshot
 
 
 def test_stable_discharge_at_six_watts_with_twelve_wh_usable_has_two_hour_eta(tmp_path: Path) -> None:

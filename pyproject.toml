@@ -34,10 +34,8 @@ system = ["dbus-next>=0.2.3"]
 dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10"]
 
 [project.scripts]
-thinkpad-energy-manager = "battery_auditor.cli:main"
-thinkpad-energy-manager-qt = "battery_auditor.ui.main:main"
-battery-auditor = "battery_auditor.cli:main"
-battery-auditor-qt = "battery_auditor.ui.main:main"
+thinkpad-energy-manager = "thinkpad_energy_manager.cli:main"
+thinkpad-energy-manager-qt = "thinkpad_energy_manager.ui.main:main"
 
 [project.urls]
 Homepage = "https://github.com/arfipod/thinkpad-energy-manager"

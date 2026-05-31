@@ -11,8 +11,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.models import BatterySnapshot, Event, SystemSnapshot
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.models import BatterySnapshot, Event, SystemSnapshot
 
 SCHEMA_VERSION = 3
 
@@ -246,7 +246,7 @@ class BatteryDatabase:
         return [str(row[0]) for row in conn.execute(f"PRAGMA {pragma}")]
 
     def start_session(self, session_id: str, name: str | None, cfg_json: str) -> None:
-        from battery_auditor.core.models import wall_iso_from_timestamp
+        from thinkpad_energy_manager.core.models import wall_iso_from_timestamp
 
         conn = self.connect()
         now = time.time()
@@ -291,7 +291,7 @@ class BatteryDatabase:
         conn.commit()
 
     def end_session(self, session_id: str, reason: str = "stopped") -> None:
-        from battery_auditor.core.models import wall_iso_from_timestamp
+        from thinkpad_energy_manager.core.models import wall_iso_from_timestamp
 
         conn = self.connect()
         now = time.time()
@@ -306,7 +306,7 @@ class BatteryDatabase:
         conn.commit()
 
     def recover_open_sessions(self, reason: str = "interrupted_or_power_loss") -> list[str]:
-        from battery_auditor.core.models import wall_iso_from_timestamp
+        from thinkpad_energy_manager.core.models import wall_iso_from_timestamp
 
         conn = self.connect()
         rows = conn.execute(
@@ -666,7 +666,7 @@ class BatteryDatabase:
         return [dict(row) for row in self.fetch_session_series(session_id)]
 
     def merge_sessions(self, source_session_ids: list[str], merged_session_id: str, name: str) -> str:
-        from battery_auditor.core.models import wall_iso_from_timestamp
+        from thinkpad_energy_manager.core.models import wall_iso_from_timestamp
 
         source_ids = list(dict.fromkeys(source_session_ids))
         if not source_ids:

@@ -14,10 +14,10 @@ pytest.importorskip("pyqtgraph")
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from battery_auditor.config import AuditorConfig  # noqa: E402
-from battery_auditor.core.database import BatteryDatabase  # noqa: E402
-from battery_auditor.core.sysfs import read_snapshot  # noqa: E402
-from battery_auditor.ui.main import MainWindow  # noqa: E402
+from thinkpad_energy_manager.config import AuditorConfig  # noqa: E402
+from thinkpad_energy_manager.core.database import BatteryDatabase  # noqa: E402
+from thinkpad_energy_manager.core.sysfs import read_snapshot  # noqa: E402
+from thinkpad_energy_manager.ui.main import MainWindow  # noqa: E402
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sysfs_sample"
 

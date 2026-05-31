@@ -6,9 +6,9 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.database import BatteryDatabase
-from battery_auditor.core.models import Event
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.database import BatteryDatabase
+from thinkpad_energy_manager.core.models import Event
 
 ENERGY_FULL_RELEARN = "ENERGY_FULL_RELEARN"
 ENERGY_FULL_DESIGN_CHANGE = "ENERGY_FULL_DESIGN_CHANGE"

@@ -6,7 +6,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from battery_auditor.core.models import wall_iso_from_timestamp
+from thinkpad_energy_manager.core.models import wall_iso_from_timestamp
 
 ABOUT_TO_SLEEP = "ABOUT_TO_SLEEP"
 RESUMED = "RESUMED"

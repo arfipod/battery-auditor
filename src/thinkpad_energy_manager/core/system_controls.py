@@ -7,7 +7,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from battery_auditor.core.sysfs import parse_bool01, parse_int, read_text_file
+from thinkpad_energy_manager.core.sysfs import parse_bool01, parse_int, read_text_file
 
 CommandRunner = Callable[..., subprocess.CompletedProcess[str]]
 

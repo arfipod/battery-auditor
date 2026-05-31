@@ -5,15 +5,15 @@ from dataclasses import asdict, dataclass
 from statistics import median
 from typing import Any
 
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.database import BatteryDatabase
-from battery_auditor.core.gauge_jumps import (
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.database import BatteryDatabase
+from thinkpad_energy_manager.core.gauge_jumps import (
     LOW_END_GAUGE_JUMP,
     GaugeJumpConfig,
     analyze_session_jumps,
 )
-from battery_auditor.core.relearn import ENERGY_FULL_RELEARN, RelearnConfig, analyze_session_relearn
-from battery_auditor.core.thresholds import STATUS_MISMATCH, analyze_session_thresholds
+from thinkpad_energy_manager.core.relearn import ENERGY_FULL_RELEARN, RelearnConfig, analyze_session_relearn
+from thinkpad_energy_manager.core.thresholds import STATUS_MISMATCH, analyze_session_thresholds
 
 ACTIVE_DISCHARGING = "ACTIVE_DISCHARGING"
 RESERVE = "RESERVE"

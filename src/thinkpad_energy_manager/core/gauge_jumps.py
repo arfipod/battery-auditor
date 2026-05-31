@@ -6,9 +6,9 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.database import BatteryDatabase
-from battery_auditor.core.models import Event
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.database import BatteryDatabase
+from thinkpad_energy_manager.core.models import Event
 
 IMPOSSIBLE_ENERGY_DROP = "IMPOSSIBLE_ENERGY_DROP"
 IMPOSSIBLE_ENERGY_GAIN = "IMPOSSIBLE_ENERGY_GAIN"

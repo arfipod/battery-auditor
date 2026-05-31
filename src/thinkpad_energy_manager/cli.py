@@ -8,17 +8,17 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from battery_auditor.config import AuditorConfig, load_config
-from battery_auditor.core.analyzer import (
+from thinkpad_energy_manager.config import AuditorConfig, load_config
+from thinkpad_energy_manager.core.analyzer import (
     export_session_csv,
     export_session_json,
     summarize_session,
     summary_to_text,
 )
-from battery_auditor.core.battery_model import estimate_session, estimate_to_json, estimate_to_text
-from battery_auditor.core.collector import BatteryCollector
-from battery_auditor.core.database import BatteryDatabase, repair_database
-from battery_auditor.core.gauge_jumps import (
+from thinkpad_energy_manager.core.battery_model import estimate_session, estimate_to_json, estimate_to_text
+from thinkpad_energy_manager.core.collector import BatteryCollector
+from thinkpad_energy_manager.core.database import BatteryDatabase, repair_database
+from thinkpad_energy_manager.core.gauge_jumps import (
     GaugeJumpConfig,
     analyze_session_jumps,
     export_jumps_csv,
@@ -26,13 +26,13 @@ from battery_auditor.core.gauge_jumps import (
     jumps_to_text,
     persist_gauge_jump_events,
 )
-from battery_auditor.core.phase_analyzer import (
+from thinkpad_energy_manager.core.phase_analyzer import (
     analyze_session_phases,
     export_phases_csv,
     export_phases_json,
     phases_to_text,
 )
-from battery_auditor.core.relearn import (
+from thinkpad_energy_manager.core.relearn import (
     RelearnConfig,
     analyze_session_relearn,
     export_relearn_csv,
@@ -40,7 +40,7 @@ from battery_auditor.core.relearn import (
     persist_relearn_events,
     relearn_to_text,
 )
-from battery_auditor.core.runtime import (
+from thinkpad_energy_manager.core.runtime import (
     STATUS_PAUSED,
     STATUS_RUNNING,
     STATUS_UNKNOWN,
@@ -48,8 +48,8 @@ from battery_auditor.core.runtime import (
     stop_collector,
     write_control_state,
 )
-from battery_auditor.core.sysfs import read_snapshot
-from battery_auditor.core.thresholds import (
+from thinkpad_energy_manager.core.sysfs import read_snapshot
+from thinkpad_energy_manager.core.thresholds import (
     analyze_session_thresholds,
     persist_restore_results,
     persist_threshold_events,
@@ -60,10 +60,10 @@ from battery_auditor.core.thresholds import (
     thresholds_to_json,
     thresholds_to_text,
 )
-from battery_auditor.core.thresholds import (
+from thinkpad_energy_manager.core.thresholds import (
     samples_from_rows as threshold_samples_from_rows,
 )
-from battery_auditor.core.tlp import TlpClient
+from thinkpad_energy_manager.core.tlp import TlpClient
 
 
 def build_parser() -> argparse.ArgumentParser:

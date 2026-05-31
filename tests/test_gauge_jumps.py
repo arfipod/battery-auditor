@@ -4,10 +4,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from battery_auditor.cli import main as cli_main
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.database import BatteryDatabase
-from battery_auditor.core.gauge_jumps import (
+from thinkpad_energy_manager.cli import main as cli_main
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.database import BatteryDatabase
+from thinkpad_energy_manager.core.gauge_jumps import (
     AFTER_RESUME_RECONCILIATION,
     IMPOSSIBLE_ENERGY_DROP,
     LOW_END_GAUGE_JUMP,
@@ -15,7 +15,7 @@ from battery_auditor.core.gauge_jumps import (
     GaugeJumpConfig,
     analyze_session_jumps,
 )
-from battery_auditor.core.models import BatterySnapshot, PowerSupplySnapshot, SystemSnapshot
+from thinkpad_energy_manager.core.models import BatterySnapshot, PowerSupplySnapshot, SystemSnapshot
 
 
 def test_normal_discharge_at_six_watts_over_one_second_does_not_trigger(tmp_path: Path) -> None:

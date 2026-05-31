@@ -46,7 +46,7 @@ Simulate a collector interruption:
 ```bash
 thinkpad-energy-manager collect --mode diagnostic --name recover-test
 # In another terminal:
-pkill -f 'battery_auditor.cli.*collect'
+pkill -f 'thinkpad_energy_manager.cli.*collect'
 thinkpad-energy-manager recover
 thinkpad-energy-manager analyze
 ```

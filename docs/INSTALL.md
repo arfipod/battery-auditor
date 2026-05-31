@@ -53,10 +53,29 @@ If the optional D-Bus dependency or logind signal is unavailable, the collector 
 The UI uses PySide6 and pyqtgraph. You can install both with pip:
 
 ```bash
+source .venv/bin/activate
 python -m pip install -e '.[ui]'
 ```
 
 Or install PySide6 and pyqtgraph with distribution packages if you have them available, then install the CLI package with `python -m pip install -e .`.
+
+Open the UI from the activated virtual environment:
+
+```bash
+thinkpad-energy-manager-qt
+```
+
+Or call the virtualenv entry point directly without activating:
+
+```bash
+./.venv/bin/thinkpad-energy-manager-qt
+```
+
+If the project directory or `.venv` was copied or renamed and the entry point fails with `No such file or directory`, regenerate the wrappers from this checkout:
+
+```bash
+./.venv/bin/python -m pip install -e '.[ui]'
+```
 
 ## systemd user service
 

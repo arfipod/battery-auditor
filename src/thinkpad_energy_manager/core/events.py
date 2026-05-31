@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from battery_auditor.config import AuditorConfig
-from battery_auditor.core.models import BatterySnapshot, Event, SystemSnapshot
-from battery_auditor.core.thresholds import (
+from thinkpad_energy_manager.config import AuditorConfig
+from thinkpad_energy_manager.core.models import BatterySnapshot, Event, SystemSnapshot
+from thinkpad_energy_manager.core.thresholds import (
     STATUS_MISMATCH,
     STATUS_OK,
     STATUS_UNKNOWN,
