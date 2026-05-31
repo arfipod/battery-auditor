@@ -1,0 +1,11 @@
+#!/usr/bin/make -f
+
+export PYBUILD_NAME=thinkpad-energy-manager
+export PYBUILD_SYSTEM=pyproject
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_test:
+	# Tests are run from the source tree during development. Keep package builds
+	# independent of optional UI/runtime test dependencies.

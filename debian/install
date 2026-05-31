@@ -1,0 +1,5 @@
+examples/config.toml usr/share/doc/thinkpad-energy-manager/examples/
+packaging/desktop/thinkpad-energy-manager.desktop usr/share/applications/
+packaging/polkit/com.github.arfipod.thinkpad-energy-manager.policy usr/share/polkit-1/actions/
+packaging/systemd/user/thinkpad-energy-manager-blackbox.service usr/lib/systemd/user/
+packaging/systemd/user/thinkpad-energy-manager.service usr/lib/systemd/user/

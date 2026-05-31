@@ -1,0 +1,36 @@
+Source: thinkpad-energy-manager
+Section: utils
+Priority: optional
+Maintainer: Angel Rafael Rubio Fernandez <arfipod@users.noreply.github.com>
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-python,
+ pybuild-plugin-pyproject,
+ python3-all,
+ python3-setuptools,
+ python3-wheel
+Standards-Version: 4.7.0
+Homepage: https://github.com/arfipod/thinkpad-energy-manager
+Rules-Requires-Root: no
+
+Package: thinkpad-energy-manager
+Architecture: all
+Depends:
+ ${misc:Depends},
+ ${python3:Depends},
+ libxcb-cursor0,
+ pkexec,
+ python3-pyqtgraph,
+ python3-pyside6.qtwidgets,
+ tlp
+Recommends:
+ python3-dbus-next,
+ x11-xserver-utils,
+ xdg-utils
+Description: ThinkPad battery and energy manager
+ ThinkPad Energy Manager records, analyzes, and charts local Linux battery
+ behavior, especially on laptops with multiple batteries such as Lenovo
+ ThinkPads with Power Bridge.
+ .
+ The package includes the command-line collector, Qt interface, polkit sysfs
+ helper, desktop launcher, and user-level systemd service units.

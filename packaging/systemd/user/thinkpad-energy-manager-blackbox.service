@@ -5,7 +5,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/thinkpad-energy-manager collect --mode blackbox --name blackbox-service
+ExecStart=/usr/bin/thinkpad-energy-manager collect --mode blackbox --name blackbox-service
 Restart=on-failure
 RestartSec=5s
 Nice=5
